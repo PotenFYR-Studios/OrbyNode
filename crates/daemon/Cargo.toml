@@ -15,5 +15,6 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 orbynode-api = { workspace = true }
 orbynode-core = { workspace = true }
+orbynode-database = { workspace = true }
 orbynode-realtime = { workspace = true }
 orbynode-terminal = { workspace = true }

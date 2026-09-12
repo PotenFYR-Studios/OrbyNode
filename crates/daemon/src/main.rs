@@ -10,6 +10,13 @@ async fn main() {
     let cfg = orbynode_core::Config::from_env();
     init_tracing(&cfg);
 
+    std::fs::create_dir_all(&cfg.data_dir)
+        .unwrap_or_else(|e| panic!("cannot create data dir {}: {e}", cfg.data_dir.display()));
+    let db = orbynode_database::Db::open(&orbynode_core::db_url(&cfg.data_dir))
+        .await
+        .unwrap_or_else(|e| panic!("cannot open database: {e}"));
+    tracing::info!(dir = %cfg.data_dir.display(), "database ready");
+
     let terminals =
         orbynode_terminal::TerminalManager::new(orbynode_terminal::TerminalConfig::default());
     let realtime = Arc::new(orbynode_realtime::EventBus::new(
@@ -21,6 +28,7 @@ async fn main() {
             .map_or(WebSource::Embedded, WebSource::Disk),
         terminals,
         realtime,
+        db,
     );
     let app = orbynode_api::build_router(state);
 

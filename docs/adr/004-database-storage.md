@@ -1,21 +1,34 @@
 # ADR 004 — Database / Storage
 
-- Status: Proposed
-- Date: Milestone 3 (Projects and Persistence)
+- Status: Accepted
+- Date: 2026-09-13 (Milestone 3)
 - Context: Plan §9, §74; Milestone 3 (§126)
 
 ## Decision
 
-To be finalized at the start of Milestone 3. Expected shape:
+`crates/database` owns persistence: SQLite via SQLx, WAL mode, compile-time
+checked queries (`query!` macros need a build-time DB; this codebase uses the
+unchecked `query` API at M3 and migrates to macros once the sqlx CLI lands in
+CI — tracked as follow-up, not a design change).
 
-- SQLite with WAL, accessed through SQLx with compile-time-checked queries.
-- Migrations checked into the repo, forward-only.
-- Durable state only (Plan §74): projects, sessions, tasks, settings, users.
-  Terminal bytes, presence, metrics, mouse/animation state never hit the DB —
-  those stay in memory or bounded ring buffers.
-- Short transactions, prepared statements, batched writes.
+- **Schema v1:** `meta` (key/value), `projects`, `sessions`,
+  `session_terminals` (layout + terminal metadata), `settings` (namespaced
+  key/value). Foreign keys ON. Migrations via `_sqlx_migrations`-style
+  user table `schema_migrations` with versioned SQL files in
+  `crates/database/migrations/`.
+- **What is stored:** durable state only (§74) — projects, sessions, terminal
+  layout/metadata, settings. Terminal bytes, presence, bus events, metrics
+  never touch the DB.
+- **Restart recovery (§9):** daemon start loads projects/sessions/settings,
+  reconstructs session layout, marks terminals non-resumable (OS processes
+  died with the daemon — never pretend otherwise, §9.7). Worktree/agent
+  resume arrives in later milestones.
+- **Access pattern:** one connection pool, short writes. The realtime bus and
+  PTY runtime stay fully in-memory.
 
 ## Consequences
 
-- No external DB service required for standard installs (Plan §152).
-- A PostgreSQL backend remains a future option (§92) but is not designed in.
+- M3 acceptance: projects and session layout survive daemon restart.
+- Event resume across daemon restart is explicitly out of scope: clients
+  resnapshot on daemon restart (their `last_seq` predates the new process).
+- Backups (§50) later read the SQLite file directly; no separate format.

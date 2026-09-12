@@ -11,8 +11,8 @@ This file tracks status; the plan holds the detail.
 | 0  | Foundation                 | ✅ Done          |
 | 1  | Real PTY Runtime           | ✅ Done          |
 | 2  | Realtime Core              | ✅ Done          |
-| 3  | Projects and Persistence   | Next            |
-| 4  | Setup and Authentication   | —               |
+| 3  | Projects and Persistence   | ✅ Done          |
+| 4  | Setup and Authentication   | Next            |
 | 5  | Native Desktop/Tray        | —               |
 | 6  | Agent Detection            | —               |
 | 7  | Agent Integrations         | —               |

@@ -13,6 +13,24 @@ use serde_json::json;
 use tower_http::trace::TraceLayer;
 
 pub mod gateway;
+
+/// Small error wrapper shared by route modules (avoids `result_large_err`).
+#[derive(Debug)]
+pub struct ApiError(pub StatusCode);
+
+impl axum::response::IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        self.0.into_response()
+    }
+}
+
+impl From<orbynode_database::DbError> for ApiError {
+    fn from(e: orbynode_database::DbError) -> Self {
+        tracing::error!(error = %e, "db error");
+        ApiError(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
+pub mod project_routes;
 pub mod terminal_routes;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_assets.rs"));
@@ -32,6 +50,7 @@ pub struct AppState {
     pub web: WebSource,
     pub terminals: Arc<orbynode_terminal::TerminalManager>,
     pub realtime: Arc<orbynode_realtime::EventBus>,
+    pub db: orbynode_database::Db,
 }
 
 impl std::fmt::Debug for AppState {
@@ -45,12 +64,14 @@ impl AppState {
         web: WebSource,
         terminals: Arc<orbynode_terminal::TerminalManager>,
         realtime: Arc<orbynode_realtime::EventBus>,
+        db: orbynode_database::Db,
     ) -> Self {
         AppState {
             started_at: Instant::now(),
             web,
             terminals,
             realtime,
+            db,
         }
     }
 
@@ -109,6 +130,8 @@ impl Default for AppState {
             realtime: Arc::new(orbynode_realtime::EventBus::new(
                 orbynode_realtime::ReplayConfig::default(),
             )),
+            db: test_db(),
+
         }
     }
 }
@@ -119,6 +142,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/version", get(version))
         .merge(terminal_routes::routes())
         .merge(gateway::routes())
+        .merge(project_routes::routes())
         .fallback(get(serve_web))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
@@ -188,6 +212,28 @@ fn mime(path: &str) -> &'static str {
         Some("woff2") => "font/woff2",
         _ => "application/octet-stream",
     }
+}
+
+/// Process-wide default in-memory DB for default/test state. A static runtime
+/// avoids nested-runtime panics when `default()` runs inside tokio tests.
+fn test_db() -> orbynode_database::Db {
+    static DB: std::sync::OnceLock<orbynode_database::Db> = std::sync::OnceLock::new();
+    DB.get_or_init(|| {
+        std::thread::spawn(|| {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("test-db runtime")
+                .block_on(async {
+                    orbynode_database::Db::open("sqlite::memory:")
+                        .await
+                        .expect("test db")
+                })
+        })
+        .join()
+        .expect("test-db thread")
+    })
+    .clone()
 }
 
 #[cfg(test)]

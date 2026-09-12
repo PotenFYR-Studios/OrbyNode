@@ -65,6 +65,14 @@ fn env_path(key: &str) -> Option<PathBuf> {
     std::env::var_os(key).map(PathBuf::from)
 }
 
+/// SQLite URL for the daemon database, under the data dir.
+pub fn db_url(data_dir: &std::path::Path) -> String {
+    format!(
+        "sqlite://{}?mode=rwc",
+        data_dir.join("orbynode.db").display()
+    )
+}
+
 /// `~/.orbynode` — falls back to a local dir when HOME is unknown (rare).
 pub fn default_data_dir() -> PathBuf {
     home_dir()
