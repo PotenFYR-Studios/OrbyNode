@@ -1,7 +1,5 @@
 //! OrbyNode daemon entry point (ADR 001): the daemon is the product runtime.
 
-use std::time::Instant;
-
 use orbynode_api::{AppState, WebSource};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -10,13 +8,14 @@ async fn main() {
     let cfg = orbynode_core::Config::from_env();
     init_tracing(&cfg);
 
-    let state = AppState {
-        started_at: Instant::now(),
-        web: cfg
-            .static_dir
+    let terminals =
+        orbynode_terminal::TerminalManager::new(orbynode_terminal::TerminalConfig::default());
+    let state = AppState::new(
+        cfg.static_dir
             .clone()
             .map_or(WebSource::Embedded, WebSource::Disk),
-    };
+        terminals,
+    );
     let app = orbynode_api::build_router(state);
 
     let listener = tokio::net::TcpListener::bind(cfg.bind)

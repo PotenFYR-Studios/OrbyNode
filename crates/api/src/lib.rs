@@ -1,6 +1,7 @@
 //! OrbyNode HTTP API — REST endpoints and embedded web UI delivery (ADR 003, ADR 006).
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 use axum::extract::{Request, State};
@@ -10,6 +11,8 @@ use axum::routing::get;
 use axum::{Json, Router};
 use serde_json::json;
 use tower_http::trace::TraceLayer;
+
+pub mod terminal_routes;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_assets.rs"));
 
@@ -22,10 +25,27 @@ pub enum WebSource {
     Disk(PathBuf),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     pub started_at: Instant,
     pub web: WebSource,
+    pub terminals: Arc<orbynode_terminal::TerminalManager>,
+}
+
+impl std::fmt::Debug for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AppState").field("web", &self.web).finish()
+    }
+}
+
+impl AppState {
+    pub fn new(web: WebSource, terminals: Arc<orbynode_terminal::TerminalManager>) -> Self {
+        AppState {
+            started_at: Instant::now(),
+            web,
+            terminals,
+        }
+    }
 }
 
 impl Default for AppState {
@@ -33,6 +53,9 @@ impl Default for AppState {
         AppState {
             started_at: Instant::now(),
             web: WebSource::Embedded,
+            terminals: orbynode_terminal::TerminalManager::new(
+                orbynode_terminal::TerminalConfig::default(),
+            ),
         }
     }
 }
@@ -41,6 +64,7 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/version", get(version))
+        .merge(terminal_routes::routes())
         .fallback(get(serve_web))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

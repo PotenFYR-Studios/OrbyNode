@@ -9,8 +9,8 @@ This file tracks status; the plan holds the detail.
 | #  | Milestone                  | Status          |
 | -- | -------------------------- | --------------- |
 | 0  | Foundation                 | ✅ Done          |
-| 1  | Real PTY Runtime           | Next            |
-| 2  | Realtime Core              | —               |
+| 1  | Real PTY Runtime           | ✅ Done          |
+| 2  | Realtime Core              | Next            |
 | 3  | Projects and Persistence   | —               |
 | 4  | Setup and Authentication   | —               |
 | 5  | Native Desktop/Tray        | —               |
