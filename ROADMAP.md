@@ -13,7 +13,7 @@ This file tracks status; the plan holds the detail.
 | 2  | Realtime Core              | ✅ Done          |
 | 3  | Projects and Persistence   | ✅ Done          |
 | 4  | Setup and Authentication   | ✅ Done          |
-| 5  | Native Desktop/Tray        | Next            |
+| 5  | Native Desktop/Tray        | ✅ Done          |
 | 6  | Agent Detection            | Next            |
 | 7  | Agent Integrations         | —               |
 | 8  | Files and Git              | —               |
