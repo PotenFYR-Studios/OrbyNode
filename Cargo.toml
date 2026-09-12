@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth"]
+exclude = ["desktop/tauri"]
 
 [workspace.package]
 version = "0.0.1"

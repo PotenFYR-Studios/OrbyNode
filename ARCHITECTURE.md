@@ -20,8 +20,13 @@ Browser / PWA ──HTTP──► OrbyNode daemon
 | Crate             | Role                                                |
 | ----------------- | --------------------------------------------------- |
 | `crates/core`     | Shared types: version, config, paths. Deliberately small. |
-| `crates/api`      | Axum router, REST endpoints, embedded web UI.        |
+| `crates/api`      | Axum router, REST endpoints, embedded web UI, realtime gateway, auth middleware. |
 | `crates/daemon`   | `orbynode` binary: config, tracing, server loop.     |
+| `crates/terminal` | Real PTY runtime: capture once, fan out, bounded scrollback. |
+| `crates/realtime` | Event bus + client sessions: sequences, replay, priorities. |
+| `crates/database` | SQLite persistence: projects, sessions, settings.    |
+| `crates/auth`     | Argon2id passwords, sessions, throttling.            |
+| `desktop/tauri`   | Tauri shell: tray + window. Client only (ADR 007).   |
 
 New subsystems (terminal, realtime, database, auth, …) become new crates when
 a milestone introduces them — see `Plan.md` §120 for the target layout.
