@@ -10,8 +10,8 @@ This file tracks status; the plan holds the detail.
 | -- | -------------------------- | --------------- |
 | 0  | Foundation                 | ✅ Done          |
 | 1  | Real PTY Runtime           | ✅ Done          |
-| 2  | Realtime Core              | Next            |
-| 3  | Projects and Persistence   | —               |
+| 2  | Realtime Core              | ✅ Done          |
+| 3  | Projects and Persistence   | Next            |
 | 4  | Setup and Authentication   | —               |
 | 5  | Native Desktop/Tray        | —               |
 | 6  | Agent Detection            | —               |

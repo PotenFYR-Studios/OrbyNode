@@ -12,6 +12,7 @@ use axum::{Json, Router};
 use serde_json::json;
 use tower_http::trace::TraceLayer;
 
+pub mod gateway;
 pub mod terminal_routes;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_assets.rs"));
@@ -30,6 +31,7 @@ pub struct AppState {
     pub started_at: Instant,
     pub web: WebSource,
     pub terminals: Arc<orbynode_terminal::TerminalManager>,
+    pub realtime: Arc<orbynode_realtime::EventBus>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -39,12 +41,60 @@ impl std::fmt::Debug for AppState {
 }
 
 impl AppState {
-    pub fn new(web: WebSource, terminals: Arc<orbynode_terminal::TerminalManager>) -> Self {
+    pub fn new(
+        web: WebSource,
+        terminals: Arc<orbynode_terminal::TerminalManager>,
+        realtime: Arc<orbynode_realtime::EventBus>,
+    ) -> Self {
         AppState {
             started_at: Instant::now(),
             web,
             terminals,
+            realtime,
         }
+    }
+
+    /// M2 gateway session hook: authorization is allow-all pre-auth (M4
+    /// replaces it with the real ACL; ADR 009 keeps call sites stable).
+    pub fn gateway_session(
+        &self,
+        _stream: &orbynode_realtime::Stream,
+    ) -> Result<(), orbynode_realtime::ClientError> {
+        Ok(())
+    }
+
+    pub fn gateway_unsub(&self, _stream: &orbynode_realtime::Stream) {
+        // M2: per-connection registries live in the gateway task; no-op here.
+    }
+
+    /// Bridge a terminal's PTY broadcast into the realtime bus as a stream
+    /// (`terminal:<id>`). Called once per terminal; capture stays single (§59).
+    pub fn bridge_terminal_to_bus(&self, id: u64) {
+        let Some(term) = self.terminals.get(id) else {
+            return;
+        };
+        let bus = self.realtime.clone();
+        let stream = orbynode_realtime::Stream::new(format!("terminal:{id}"));
+        let mut rx = term.subscribe();
+        tokio::spawn(async move {
+            while let Ok(bytes) = rx.recv().await {
+                bus.publish(orbynode_realtime::Event {
+                    stream: stream.clone(),
+                    etype: "terminal.output".into(),
+                    data: serde_json::json!({}),
+                    priority: orbynode_realtime::Priority::Droppable,
+                    bytes,
+                });
+                // Bytes ride the envelope's sibling field, not JSON-escaped
+                // (§65). The gateway encodes them as base64 in `data.bytes`.
+                let _ = bytes;
+            }
+        });
+    }
+
+    /// Track a subscription (M2: always true; M11 revocation replaces this).
+    pub fn gateway_track(&self, _stream: &orbynode_realtime::Stream) -> bool {
+        true
     }
 }
 
@@ -56,6 +106,9 @@ impl Default for AppState {
             terminals: orbynode_terminal::TerminalManager::new(
                 orbynode_terminal::TerminalConfig::default(),
             ),
+            realtime: Arc::new(orbynode_realtime::EventBus::new(
+                orbynode_realtime::ReplayConfig::default(),
+            )),
         }
     }
 }
@@ -65,6 +118,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/health", get(health))
         .route("/version", get(version))
         .merge(terminal_routes::routes())
+        .merge(gateway::routes())
         .fallback(get(serve_web))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

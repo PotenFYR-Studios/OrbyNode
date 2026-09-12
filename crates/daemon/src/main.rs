@@ -1,5 +1,7 @@
 //! OrbyNode daemon entry point (ADR 001): the daemon is the product runtime.
 
+use std::sync::Arc;
+
 use orbynode_api::{AppState, WebSource};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -10,11 +12,15 @@ async fn main() {
 
     let terminals =
         orbynode_terminal::TerminalManager::new(orbynode_terminal::TerminalConfig::default());
+    let realtime = Arc::new(orbynode_realtime::EventBus::new(
+        orbynode_realtime::ReplayConfig::default(),
+    ));
     let state = AppState::new(
         cfg.static_dir
             .clone()
             .map_or(WebSource::Embedded, WebSource::Disk),
         terminals,
+        realtime,
     );
     let app = orbynode_api::build_router(state);
 

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal"]
+members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime"]
 
 [workspace.package]
 version = "0.0.1"
@@ -10,6 +10,7 @@ license = "MIT"
 [workspace.dependencies]
 orbynode-core = { path = "crates/core" }
 orbynode-terminal = { path = "crates/terminal" }
+orbynode-realtime = { path = "crates/realtime" }
 orbynode-api = { path = "crates/api" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync", "time"] }
 axum = "0.8"

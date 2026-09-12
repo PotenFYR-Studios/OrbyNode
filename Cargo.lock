@@ -444,6 +444,7 @@ dependencies = [
  "axum",
  "futures-util",
  "orbynode-core",
+ "orbynode-realtime",
  "orbynode-terminal",
  "serde",
  "serde_json",
@@ -464,10 +465,21 @@ dependencies = [
  "axum",
  "orbynode-api",
  "orbynode-core",
+ "orbynode-realtime",
  "orbynode-terminal",
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "orbynode-realtime"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

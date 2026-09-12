@@ -73,6 +73,7 @@ async fn create_terminal(
         cwd: body.cwd.map(std::path::PathBuf::from),
     };
     let term = state.terminals.create(cfg).map_err(ApiError::from)?;
+    state.bridge_terminal_to_bus(term.id());
     Ok(Json(term.info()))
 }
 
