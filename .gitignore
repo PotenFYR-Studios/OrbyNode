@@ -1,0 +1,23 @@
+# Master plan — working document, intentionally untracked (user instruction)
+Plan.md
+
+# Rust
+/target
+**/*.rs.bk
+
+# Node / web
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# Editor / tooling
+.serena/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local runtime artifacts
+*.log
+.env
+.env.*
