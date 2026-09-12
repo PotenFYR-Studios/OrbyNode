@@ -95,9 +95,10 @@ pub struct Db {
     pub pool: sqlx::SqlitePool,
 }
 
-const MIGRATIONS: &[(i64, &str)] = &[(
-    1,
-    r#"
+const MIGRATIONS: &[(i64, &str)] = &[
+    (
+        1,
+        r#"
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
         CREATE TABLE projects (
@@ -130,7 +131,31 @@ const MIGRATIONS: &[(i64, &str)] = &[(
             value TEXT NOT NULL
         );
         "#,
-)];
+    ),
+    (
+        2,
+        r#"
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            display_name TEXT NOT NULL DEFAULT '',
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE auth_sessions (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            csrf TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_auth_sessions_expiry ON auth_sessions (expires_at);
+        "#,
+    ),
+];
 
 impl Db {
     /// Open (creating if needed) and apply pending migrations.

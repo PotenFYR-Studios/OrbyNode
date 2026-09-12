@@ -24,8 +24,16 @@ struct CreateProjectBody {
     path: String,
 }
 
-async fn list_projects(State(state): State<AppState>) -> Result<Json<Vec<Project>>, crate::ApiError> {
-    Ok(Json(state.db.list_projects().await.map_err(crate::ApiError::from)?))
+async fn list_projects(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Project>>, crate::ApiError> {
+    Ok(Json(
+        state
+            .db
+            .list_projects()
+            .await
+            .map_err(crate::ApiError::from)?,
+    ))
 }
 
 async fn create_project(
@@ -57,7 +65,11 @@ async fn delete_project(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, crate::ApiError> {
-    state.db.delete_project(id).await.map_err(crate::ApiError::from)?;
+    state
+        .db
+        .delete_project(id)
+        .await
+        .map_err(crate::ApiError::from)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -70,7 +82,13 @@ async fn list_sessions(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<Session>>, crate::ApiError> {
-    Ok(Json(state.db.list_sessions(id).await.map_err(crate::ApiError::from)?))
+    Ok(Json(
+        state
+            .db
+            .list_sessions(id)
+            .await
+            .map_err(crate::ApiError::from)?,
+    ))
 }
 
 async fn create_session(

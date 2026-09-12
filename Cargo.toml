@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database"]
+members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth"]
 
 [workspace.package]
 version = "0.0.1"
@@ -10,6 +10,7 @@ license = "MIT"
 [workspace.dependencies]
 orbynode-core = { path = "crates/core" }
 orbynode-terminal = { path = "crates/terminal" }
+orbynode-auth = { path = "crates/auth" }
 orbynode-database = { path = "crates/database" }
 orbynode-realtime = { path = "crates/realtime" }
 orbynode-api = { path = "crates/api" }

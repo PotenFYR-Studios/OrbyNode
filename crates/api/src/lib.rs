@@ -12,6 +12,7 @@ use axum::{Json, Router};
 use serde_json::json;
 use tower_http::trace::TraceLayer;
 
+pub mod auth_routes;
 pub mod gateway;
 
 /// Small error wrapper shared by route modules (avoids `result_large_err`).
@@ -21,6 +22,13 @@ pub struct ApiError(pub StatusCode);
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> Response {
         self.0.into_response()
+    }
+}
+
+impl From<orbynode_auth::AuthError> for ApiError {
+    fn from(e: orbynode_auth::AuthError) -> Self {
+        tracing::error!(error = %e, "auth error");
+        ApiError(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 
@@ -51,6 +59,7 @@ pub struct AppState {
     pub terminals: Arc<orbynode_terminal::TerminalManager>,
     pub realtime: Arc<orbynode_realtime::EventBus>,
     pub db: orbynode_database::Db,
+    pub auth: Arc<orbynode_auth::AuthService>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -71,6 +80,7 @@ impl AppState {
             web,
             terminals,
             realtime,
+            auth: Arc::new(orbynode_auth::AuthService::new(db.clone())),
             db,
         }
     }
@@ -131,18 +141,25 @@ impl Default for AppState {
                 orbynode_realtime::ReplayConfig::default(),
             )),
             db: test_db(),
-
+            auth: Arc::new(orbynode_auth::AuthService::new(test_db())),
         }
     }
 }
 
 pub fn build_router(state: AppState) -> Router {
-    Router::new()
-        .route("/health", get(health))
-        .route("/version", get(version))
+    let protected = Router::new()
         .merge(terminal_routes::routes())
         .merge(gateway::routes())
         .merge(project_routes::routes())
+        .route_layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth_routes::require_auth,
+        ));
+    Router::new()
+        .route("/health", get(health))
+        .route("/version", get(version))
+        .merge(auth_routes::routes())
+        .merge(protected)
         .fallback(get(serve_web))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
