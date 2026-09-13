@@ -1,0 +1,10 @@
+[package]
+name = "orbynode-services"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+serde = { workspace = true }
+tokio = { workspace = true, features = ["net"] }
+tracing = { workspace = true }

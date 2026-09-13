@@ -8,6 +8,7 @@ build = "build.rs"
 [dependencies]
 axum = { workspace = true, features = ["ws"] }
 futures-util = "0.3"
+reqwest = { version = "0.12" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }
@@ -21,6 +22,7 @@ orbynode-integrations = { workspace = true }
 orbynode-auth = { workspace = true }
 orbynode-database = { workspace = true }
 orbynode-realtime = { workspace = true }
+orbynode-services = { workspace = true }
 orbynode-terminal = { workspace = true }
 
 [dev-dependencies]

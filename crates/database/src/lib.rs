@@ -492,26 +492,24 @@ impl Db {
     const TASK_COLUMNS: &str = "id, project_id, title, description, state, priority, assignee, agent, branch, worktree, version, created_at, updated_at";
 
     pub async fn get_task(&self, id: i64) -> DbResult<Option<Task>> {
-        let row: Option<TaskRow> =
-            sqlx::query_as(&format!(
-                "SELECT {} FROM tasks WHERE id = ?",
-                Self::TASK_COLUMNS
-            ))
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?;
+        let row: Option<TaskRow> = sqlx::query_as(&format!(
+            "SELECT {} FROM tasks WHERE id = ?",
+            Self::TASK_COLUMNS
+        ))
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
         Ok(row.map(Self::task_row))
     }
 
     pub async fn list_tasks(&self, project_id: i64) -> DbResult<Vec<Task>> {
-        let rows: Vec<TaskRow> =
-            sqlx::query_as(&format!(
-                "SELECT {} FROM tasks WHERE project_id = ? ORDER BY priority, id",
-                Self::TASK_COLUMNS
-            ))
-            .bind(project_id)
-            .fetch_all(&self.pool)
-            .await?;
+        let rows: Vec<TaskRow> = sqlx::query_as(&format!(
+            "SELECT {} FROM tasks WHERE project_id = ? ORDER BY priority, id",
+            Self::TASK_COLUMNS
+        ))
+        .bind(project_id)
+        .fetch_all(&self.pool)
+        .await?;
         Ok(rows.into_iter().map(Self::task_row).collect())
     }
 
@@ -541,12 +539,7 @@ impl Db {
     }
 
     /// Attach branch/worktree metadata (worktree-per-task, §25).
-    pub async fn set_task_worktree(
-        &self,
-        id: i64,
-        branch: &str,
-        worktree: &str,
-    ) -> DbResult<()> {
+    pub async fn set_task_worktree(&self, id: i64, branch: &str, worktree: &str) -> DbResult<()> {
         sqlx::query("UPDATE tasks SET branch = ?, worktree = ?, updated_at = ? WHERE id = ?")
             .bind(branch)
             .bind(worktree)
@@ -669,28 +662,44 @@ mod tests {
         assert_eq!(db.get_setting("missing").await.unwrap(), None);
     }
 
-
     #[tokio::test]
     async fn task_crud_and_board_flow() {
         let db = mem_db().await;
         let p = db.create_project("app", "/tmp/app").await.unwrap();
-        let t = db.create_task(p.id, "Add OAuth", "implement login", 2).await.unwrap();
+        let t = db
+            .create_task(p.id, "Add OAuth", "implement login", 2)
+            .await
+            .unwrap();
         assert_eq!(t.state, TaskState::Backlog);
         assert_eq!(t.version, 1);
 
         // Optimistic move: correct version succeeds, bumps version.
-        let moved = db.move_task(t.id, TaskState::Ready, t.version).await.unwrap().unwrap();
+        let moved = db
+            .move_task(t.id, TaskState::Ready, t.version)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(moved.state, TaskState::Ready);
         assert_eq!(moved.version, 2);
 
         // Stale version conflicts (§68).
-        let conflict = db.move_task(t.id, TaskState::Running, t.version).await.unwrap();
+        let conflict = db
+            .move_task(t.id, TaskState::Running, t.version)
+            .await
+            .unwrap();
         assert_eq!(conflict, Err(Conflict));
 
         // Fresh version succeeds.
-        let moved = db.move_task(t.id, TaskState::Running, moved.version).await.unwrap().unwrap();
+        let moved = db
+            .move_task(t.id, TaskState::Running, moved.version)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(moved.state, TaskState::Running);
-        assert_eq!(db.list_tasks(p.id).await.unwrap()[0].state, TaskState::Running);
+        assert_eq!(
+            db.list_tasks(p.id).await.unwrap()[0].state,
+            TaskState::Running
+        );
     }
 
     #[tokio::test]
@@ -698,7 +707,9 @@ mod tests {
         let db = mem_db().await;
         let p = db.create_project("app", "/tmp/app").await.unwrap();
         let t = db.create_task(p.id, "T", "", 3).await.unwrap();
-        db.set_task_worktree(t.id, "agent/oauth", "/home/u/.orbynode/worktrees/app/oauth").await.unwrap();
+        db.set_task_worktree(t.id, "agent/oauth", "/home/u/.orbynode/worktrees/app/oauth")
+            .await
+            .unwrap();
         let got = db.get_task(t.id).await.unwrap().unwrap();
         assert_eq!(got.branch, "agent/oauth");
         assert_eq!(got.worktree, "/home/u/.orbynode/worktrees/app/oauth");

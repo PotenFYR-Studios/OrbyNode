@@ -49,6 +49,7 @@ impl From<orbynode_database::DbError> for ApiError {
     }
 }
 pub mod project_routes;
+pub mod service_routes;
 pub mod task_routes;
 pub mod terminal_routes;
 
@@ -72,6 +73,7 @@ pub struct AppState {
     pub db: orbynode_database::Db,
     pub auth: Arc<orbynode_auth::AuthService>,
     pub detector: Arc<orbynode_agents::AgentDetector>,
+    pub service_registry: Arc<orbynode_services::ServiceRegistry>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -92,6 +94,7 @@ impl AppState {
             web,
             terminals,
             detector: Arc::new(orbynode_agents::AgentDetector::new((*realtime).clone())),
+            service_registry: Arc::new(orbynode_services::ServiceRegistry::new()),
             realtime,
             auth: Arc::new(orbynode_auth::AuthService::new(db.clone())),
             db,
@@ -159,6 +162,7 @@ impl Default for AppState {
             db: test_db(),
             auth: Arc::new(orbynode_auth::AuthService::new(test_db())),
             detector: Arc::new(orbynode_agents::AgentDetector::new((*realtime).clone())),
+            service_registry: Arc::new(orbynode_services::ServiceRegistry::new()),
         }
     }
 }
@@ -172,6 +176,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(integration_routes::routes())
         .merge(file_routes::routes())
         .merge(task_routes::routes())
+        .merge(service_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,

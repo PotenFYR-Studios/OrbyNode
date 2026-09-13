@@ -20,7 +20,11 @@ pub fn slugify(title: &str) -> String {
     let trimmed = slug.trim_matches('-').to_lowercase();
     let collapsed: Vec<&str> = trimmed.split('-').filter(|s| !s.is_empty()).collect();
     let out = collapsed.join("-");
-    if out.is_empty() { "task".to_owned() } else { out.chars().take(48).collect() }
+    if out.is_empty() {
+        "task".to_owned()
+    } else {
+        out.chars().take(48).collect()
+    }
 }
 
 /// Manages worktrees for one project repository.
@@ -32,7 +36,10 @@ pub struct WorktreeManager {
 
 impl WorktreeManager {
     pub fn new(repo: GitRepo, base: impl Into<PathBuf>) -> Self {
-        WorktreeManager { repo, base: base.into() }
+        WorktreeManager {
+            repo,
+            base: base.into(),
+        }
     }
 
     /// Create (or reuse) the worktree + branch for a task.
@@ -42,7 +49,10 @@ impl WorktreeManager {
         let branch = format!("agent/{slug}");
         std::fs::create_dir_all(&self.base).map_err(GitError::Io)?;
         if path.exists() {
-            return Ok(Worktree { path: path.to_string_lossy().to_string(), branch });
+            return Ok(Worktree {
+                path: path.to_string_lossy().to_string(),
+                branch,
+            });
         }
         // Worktree with a new branch off HEAD.
         let out = std::process::Command::new("git")
@@ -63,13 +73,18 @@ impl WorktreeManager {
                     .output()
                     .map_err(GitError::Io)?;
                 if !out2.status.success() {
-                    return Err(GitError::Git(String::from_utf8_lossy(&out2.stderr).trim().to_owned()));
+                    return Err(GitError::Git(
+                        String::from_utf8_lossy(&out2.stderr).trim().to_owned(),
+                    ));
                 }
             } else {
                 return Err(GitError::Git(stderr.trim().to_owned()));
             }
         }
-        Ok(Worktree { path: path.to_string_lossy().to_string(), branch })
+        Ok(Worktree {
+            path: path.to_string_lossy().to_string(),
+            branch,
+        })
     }
 
     pub fn list(&self) -> Result<Vec<Worktree>, GitError> {
@@ -79,7 +94,9 @@ impl WorktreeManager {
             .output()
             .map_err(GitError::Io)?;
         if !out.status.success() {
-            return Err(GitError::Git(String::from_utf8_lossy(&out.stderr).trim().to_owned()));
+            return Err(GitError::Git(
+                String::from_utf8_lossy(&out.stderr).trim().to_owned(),
+            ));
         }
         let text = String::from_utf8_lossy(&out.stdout);
         let mut out_vec = Vec::new();
@@ -90,7 +107,10 @@ impl WorktreeManager {
             } else if let Some(b) = line.strip_prefix("branch ") {
                 let branch = b.trim_start_matches("refs/heads/").to_owned();
                 if current_path.starts_with(self.base.to_string_lossy().as_ref()) {
-                    out_vec.push(Worktree { path: current_path.clone(), branch });
+                    out_vec.push(Worktree {
+                        path: current_path.clone(),
+                        branch,
+                    });
                 }
             }
         }
@@ -111,7 +131,9 @@ impl WorktreeManager {
             .output()
             .map_err(GitError::Io)?;
         if !out.status.success() {
-            return Err(GitError::Git(String::from_utf8_lossy(&out.stderr).trim().to_owned()));
+            return Err(GitError::Git(
+                String::from_utf8_lossy(&out.stderr).trim().to_owned(),
+            ));
         }
         Ok(())
     }
@@ -136,7 +158,11 @@ mod tests {
                 .current_dir(&dir)
                 .output()
                 .unwrap();
-            assert!(out.status.success(), "git {args:?} failed: {}", String::from_utf8_lossy(&out.stderr));
+            assert!(
+                out.status.success(),
+                "git {args:?} failed: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
         };
         run(&["init", "-q", "-b", "main"]);
         run(&["config", "user.email", "t@t"]);
@@ -181,7 +207,13 @@ mod tests {
         mgr.remove("Fix bug").unwrap();
         assert!(!Path::new(&wt.path).exists());
         // Branch survives for the merge flow (§25 step 7).
-        assert!(mgr.repo.branches().unwrap().iter().any(|b| b == "agent/fix-bug"));
+        assert!(
+            mgr.repo
+                .branches()
+                .unwrap()
+                .iter()
+                .any(|b| b == "agent/fix-bug")
+        );
     }
 
     #[test]

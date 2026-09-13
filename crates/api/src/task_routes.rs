@@ -6,7 +6,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use orbynode_database::{Conflict, Task, TaskState};
 use orbynode_files::git::GitRepo;
-use orbynode_files::worktree::{default_base, WorktreeManager};
+use orbynode_files::worktree::{WorktreeManager, default_base};
 
 use crate::{ApiError, AppState};
 
@@ -16,7 +16,10 @@ pub fn routes() -> Router<AppState> {
         .route("/tasks/{id}", get(get_task).delete(delete_task))
         .route("/tasks/{id}/move", post(move_task))
         .route("/tasks/{id}/worktree", post(ensure_worktree))
-        .route("/tasks/{id}/worktree", axum::routing::delete(remove_worktree))
+        .route(
+            "/tasks/{id}/worktree",
+            axum::routing::delete(remove_worktree),
+        )
 }
 
 async fn project_path(state: &AppState, project_id: i64) -> Result<String, ApiError> {
@@ -43,7 +46,13 @@ async fn list_tasks(
     State(state): State<AppState>,
     Path(project_id): Path<i64>,
 ) -> Result<Json<Vec<Task>>, ApiError> {
-    Ok(Json(state.db.list_tasks(project_id).await.map_err(ApiError::from)?))
+    Ok(Json(
+        state
+            .db
+            .list_tasks(project_id)
+            .await
+            .map_err(ApiError::from)?,
+    ))
 }
 
 #[derive(serde::Deserialize)]
@@ -138,7 +147,14 @@ async fn ensure_worktree(
         .set_task_worktree(id, &wt.branch, &wt.path)
         .await
         .map_err(ApiError::from)?;
-    Ok(Json(state.db.get_task(id).await.map_err(ApiError::from)?.expect("exists")))
+    Ok(Json(
+        state
+            .db
+            .get_task(id)
+            .await
+            .map_err(ApiError::from)?
+            .expect("exists"),
+    ))
 }
 
 async fn remove_worktree(
