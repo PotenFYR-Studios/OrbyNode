@@ -1,97 +1,99 @@
 # Getting Started
 
-This guide builds OrbyNode from source and starts the local daemon.
+This guide covers the fastest path to running OrbyNode: using the installer.
 
-## Requirements
+## Quick start
 
-- Rust 1.85+
-- Bun 1.1+
-- Node 20+ only for CI compatibility
-- A Unix shell; Windows uses the same commands from Git Bash or WSL
-
-## Build and run
+Linux/macOS:
 
 ```bash
-git clone https://github.com/PotenFYR-Studios/OrbyNode.git
-cd OrbyNode
-(cd web && bun install)
-(cd web && bun run build)
-cargo run --release -p orbynode-daemon
+curl -fsSL https://orbynode.docs.potenfyr.in/install.sh | sh
+orbynode-daemon
 ```
 
-Open <http://127.0.0.1:7676>.
+Windows (PowerShell):
+
+```powershell
+irm https://orbynode.docs.potenfyr.in/install.ps1 | iex
+orbynode-daemon
+```
+
+Open <http://127.0.0.1:7676/setup> to create the first Owner account.
+
+## Installation methods
+
+Choose one:
+
+1. **Installer script** (recommended) — [Installation guide](installation.md)
+2. **Download binary** — [GitHub Releases](https://github.com/PotenFYR-Studios/OrbyNode/releases/latest)
+3. **Build from source** — [Development guide](development.md)
 
 ## First-run setup
 
-1. Open `/setup`.
-2. Read the warning about terminal access.
-3. Create the first Owner with a username, display name and password.
-4. Sign in from the returned session cookie.
+1. Start the daemon:
+   ```bash
+   orbynode-daemon
+   ```
+2. Open <http://127.0.0.1:7676/setup>
+3. Read the security warning (OrbyNode provides terminal access = remote code execution capability)
+4. Create the first Owner with username, display name, and password
+5. Sign in with the returned session cookie
 
-The first Owner can be created only while the users table is empty.
+The first Owner can be created only while the users table is empty. This prevents anonymous account creation after deployment.
 
 ## Configuration
 
+OrbyNode reads environment variables for runtime configuration:
+
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ORBYNODE_BIND` | `127.0.0.1:7676` | Bind address. |
-| `ORBYNODE_PORT` | `7676` | Port shorthand. |
-| `ORBYNODE_DATA_DIR` | `~/.orbynode` | SQLite and durable state. |
-| `ORBYNODE_STATIC_DIR` | embedded | Serve `web/dist` from disk for development. |
-| `ORBYNODE_LOG_FORMAT` | human | Set to `json` for structured logs. |
-| `RUST_LOG` | `info` | Tracing filter. |
+| `ORBYNODE_BIND` | `127.0.0.1:7676` | Bind address |
+| `ORBYNODE_PORT` | `7676` | Port shorthand (overrides BIND port) |
+| `ORBYNODE_DATA_DIR` | `~/.orbynode` | SQLite database and durable state |
+| `ORBYNODE_LOG_FORMAT` | `human` | Set to `json` for structured logs |
+| `RUST_LOG` | `info` | Log level (error, warn, info, debug, trace) |
 
-Example development daemon:
-
-```bash
-(cd web && bun run build)
-ORBYNODE_STATIC_DIR="$PWD/web/dist" cargo run -p orbynode-daemon
-```
-
-## Frontend workflow
-
-The frontend is Vite + React + TypeScript + Bun + Magic UI. Next.js is not
-used.
+Example with custom port and debug logging:
 
 ```bash
-(cd web && bun install)
-(cd web && bun run dev)
+ORBYNODE_PORT=8080 RUST_LOG=debug orbynode-daemon
 ```
 
-The Vite dev server proxies daemon traffic for local development.
+Configuration is environment-only; OrbyNode does not read config files. This keeps the deployment surface explicit and auditable.
 
-## Full checks
+## Using OrbyNode
 
-```bash
-cargo fmt --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-(cd web && bun run check)
-(cd web && bun run build)
-```
+### Start a project
 
-Or run:
+1. Navigate to **Projects** in the web UI
+2. Click **New Project**
+3. Provide a name and path (absolute or relative to `ORBYNODE_DATA_DIR`)
+4. OrbyNode creates the directory if it doesn't exist
 
-```bash
-scripts/check.sh
-```
+### Launch an agent
 
-## Release build
+1. Open a project
+2. Click **Start Agent** or open a terminal pane
+3. Choose the agent type (Claude Code, Codex, Gemini, etc.)
+4. OrbyNode spawns the agent in a real PTY and tracks its state
 
-```bash
-(cd web && bun install)
-(cd web && bun run build)
-cargo build --release --locked -p orbynode-daemon
-```
+### Persist across reconnects
 
-For an archive, checksum and SBOM:
+Close your browser. Reopen <http://127.0.0.1:7676>. The agent is still running, its terminal output intact. OrbyNode owns the PTY; clients are replaceable viewers.
 
-```bash
-scripts/release.sh <rust-target-triple>
-```
+### Multi-user access
+
+1. Navigate to **Users**
+2. Create accounts with roles: Owner, Editor, Viewer
+3. Share the instance URL; each user signs in with their credentials
+
+RBAC is enforced on every route and WebSocket subscription. Audit logs track all mutations.
 
 ## Next steps
 
-- Read [Architecture](../ARCHITECTURE.md).
-- Review [Security](../SECURITY.md).
-- Track status in [Roadmap](../ROADMAP.md).
+- [Architecture](../ARCHITECTURE.md) — daemon-centric design and realtime model
+- [Security](security-model.md) — authentication, RBAC, audit, threat model
+- [REST API](rest-api.md) — public `/api/v1` surface for external integrations
+- [Development](development.md) — build from source, run tests, frontend workflow
+- [Operations](operations.md) — deployment, monitoring, backup, upgrade
+- [Roadmap](../ROADMAP.md) — milestone status and v1.0 readiness
