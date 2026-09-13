@@ -225,6 +225,7 @@ mod tests {
     #[test]
     fn symlink_escape_is_rejected() {
         let (w, root) = ws("symlink");
+        #[allow(unused_variables)]
         let outside = tmp_root("symlink-outside");
         std::fs::write(outside.join("secret.txt"), "top secret").unwrap();
         #[cfg(unix)]
