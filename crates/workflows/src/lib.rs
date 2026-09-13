@@ -223,17 +223,24 @@ impl WorkflowEngine {
                 .ok_or(WorkflowError::Invalid("agent stage has no agent"))?;
             let output: std::process::Output = match &step.command {
                 Some(command) => {
-                    tokio::process::Command::new("sh")
-                        .arg("-c")
-                        .arg(command)
-                        .output()
-                        .await?
+                    #[cfg(unix)]
+                    {
+                        tokio::process::Command::new("sh")
+                            .arg("-c")
+                            .arg(command)
+                            .output()
+                            .await?
+                    }
+                    #[cfg(windows)]
+                    {
+                        tokio::process::Command::new("cmd")
+                            .args(["/C", command])
+                            .output()
+                            .await?
+                    }
                 }
                 None => std::process::Output {
-                    status: {
-                        use std::os::unix::process::ExitStatusExt;
-                        std::process::ExitStatus::from_raw(0)
-                    },
+                    status: std::process::ExitStatus::default(),
                     stdout: Vec::new(),
                     stderr: Vec::new(),
                 },
