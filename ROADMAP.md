@@ -14,8 +14,8 @@ This file tracks status; the plan holds the detail.
 | 3  | Projects and Persistence   | ✅ Done          |
 | 4  | Setup and Authentication   | ✅ Done          |
 | 5  | Native Desktop/Tray        | ✅ Done          |
-| 6  | Agent Detection            | Next            |
-| 7  | Agent Integrations         | —               |
+| 6  | Agent Detection            | ✅ Done          |
+| 7  | Agent Integrations         | Next            |
 | 8  | Files and Git              | —               |
 | 9  | Tasks and Worktrees        | —               |
 | 10 | Services and Previews      | —               |
