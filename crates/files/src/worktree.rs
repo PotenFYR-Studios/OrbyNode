@@ -106,7 +106,13 @@ impl WorktreeManager {
                 current_path = p.to_owned();
             } else if let Some(b) = line.strip_prefix("branch ") {
                 let branch = b.trim_start_matches("refs/heads/").to_owned();
-                if current_path.starts_with(self.base.to_string_lossy().as_ref()) {
+                let current = std::path::PathBuf::from(&current_path);
+                let canonical_base = self.base.canonicalize().ok();
+                let starts_in_base = match (current.canonicalize(), canonical_base) {
+                    (Ok(canonical), Some(base)) => canonical.starts_with(base),
+                    _ => false,
+                };
+                if starts_in_base {
                     out_vec.push(Worktree {
                         path: current_path.clone(),
                         branch,
