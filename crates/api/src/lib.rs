@@ -14,6 +14,7 @@ use tower_http::trace::TraceLayer;
 
 pub mod agent_routes;
 pub mod auth_routes;
+pub mod file_routes;
 pub mod gateway;
 pub mod integration_routes;
 
@@ -168,6 +169,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(project_routes::routes())
         .merge(agent_routes::routes())
         .merge(integration_routes::routes())
+        .merge(file_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,
