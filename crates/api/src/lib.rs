@@ -12,6 +12,7 @@ use axum::{Json, Router};
 use serde_json::json;
 use tower_http::trace::TraceLayer;
 
+pub mod agent_routes;
 pub mod auth_routes;
 pub mod gateway;
 
@@ -60,6 +61,7 @@ pub struct AppState {
     pub realtime: Arc<orbynode_realtime::EventBus>,
     pub db: orbynode_database::Db,
     pub auth: Arc<orbynode_auth::AuthService>,
+    pub detector: Arc<orbynode_agents::AgentDetector>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -79,6 +81,7 @@ impl AppState {
             started_at: Instant::now(),
             web,
             terminals,
+            detector: Arc::new(orbynode_agents::AgentDetector::new((*realtime).clone())),
             realtime,
             auth: Arc::new(orbynode_auth::AuthService::new(db.clone())),
             db,
@@ -105,21 +108,23 @@ impl AppState {
             return;
         };
         let bus = self.realtime.clone();
+        let detector = self.detector.clone();
         let stream = orbynode_realtime::Stream::new(format!("terminal:{id}"));
         let mut rx = term.subscribe();
         tokio::spawn(async move {
-            while let Ok(bytes) = rx.recv().await {
-                bus.publish(orbynode_realtime::Event {
+            loop {
+                let Ok(bytes) = rx.recv().await else { break };
+                let event = orbynode_realtime::Event {
                     stream: stream.clone(),
                     etype: "terminal.output".into(),
                     data: serde_json::json!({}),
                     priority: orbynode_realtime::Priority::Droppable,
                     bytes,
-                });
-                // Bytes ride the envelope's sibling field, not JSON-escaped
-                // (§65). The gateway encodes them as base64 in `data.bytes`.
-                let _ = bytes;
+                };
+                detector.observe(&event).await;
+                bus.publish(event);
             }
+            detector.mark_exited(id).await;
         });
     }
 
@@ -131,17 +136,19 @@ impl AppState {
 
 impl Default for AppState {
     fn default() -> Self {
+        let realtime = Arc::new(orbynode_realtime::EventBus::new(
+            orbynode_realtime::ReplayConfig::default(),
+        ));
         AppState {
             started_at: Instant::now(),
             web: WebSource::Embedded,
             terminals: orbynode_terminal::TerminalManager::new(
                 orbynode_terminal::TerminalConfig::default(),
             ),
-            realtime: Arc::new(orbynode_realtime::EventBus::new(
-                orbynode_realtime::ReplayConfig::default(),
-            )),
+            realtime: Arc::clone(&realtime),
             db: test_db(),
             auth: Arc::new(orbynode_auth::AuthService::new(test_db())),
+            detector: Arc::new(orbynode_agents::AgentDetector::new((*realtime).clone())),
         }
     }
 }
@@ -151,6 +158,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(terminal_routes::routes())
         .merge(gateway::routes())
         .merge(project_routes::routes())
+        .merge(agent_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,

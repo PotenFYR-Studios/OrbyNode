@@ -1,0 +1,13 @@
+[package]
+name = "orbynode-agents"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+orbynode-terminal = { path = "../terminal" }
+orbynode-realtime = { path = "../realtime" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
