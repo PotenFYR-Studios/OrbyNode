@@ -142,6 +142,14 @@ async fn write_file(
             &format!("{} bytes", body.contents.len()),
         )
         .await;
+    // Realtime fs event: the web file explorer refreshes on this (ADR 021).
+    state.realtime.publish(orbynode_realtime::Event {
+        stream: orbynode_realtime::Stream::new("project"),
+        etype: "fs.change".into(),
+        data: serde_json::json!({ "project_id": id, "path": body.path, "op": "write" }),
+        priority: orbynode_realtime::Priority::Droppable,
+        bytes: Vec::new(),
+    });
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -167,6 +175,13 @@ async fn delete_file(
         )
         .await;
     ws.delete(&q.path).map_err(files_err)?;
+    state.realtime.publish(orbynode_realtime::Event {
+        stream: orbynode_realtime::Stream::new("project"),
+        etype: "fs.change".into(),
+        data: serde_json::json!({ "project_id": id, "path": q.path, "op": "delete" }),
+        priority: orbynode_realtime::Priority::Droppable,
+        bytes: Vec::new(),
+    });
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -128,6 +128,65 @@ pub struct AuditEntry {
     pub created_at: i64,
 }
 
+// ---------- Workspaces / tabs / panes (ADR 021) ----------
+
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow, serde::Serialize)]
+pub struct Workspace {
+    pub id: i64,
+    pub project_id: Option<i64>,
+    pub name: String,
+    pub position: i64,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, serde::Serialize)]
+pub struct Tab {
+    pub id: i64,
+    pub workspace_id: i64,
+    pub name: String,
+    pub position: i64,
+    pub active_pane_id: Option<i64>,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow, serde::Serialize)]
+pub struct Pane {
+    pub id: i64,
+    pub tab_id: i64,
+    pub terminal_id: Option<i64>,
+    pub kind: String,
+    pub cwd: String,
+    pub env_json: String,
+    pub title: String,
+    pub split_dir: String,
+    pub split_ratio: Option<f64>,
+    pub position: i64,
+    pub closed_at: Option<i64>,
+    pub last_session_id: String,
+    pub degraded: bool,
+    pub created_at: i64,
+}
+
+/// Input for `Db::create_pane` (position is assigned).
+#[derive(Debug, Clone, Default)]
+pub struct NewPane {
+    pub tab_id: i64,
+    pub terminal_id: Option<i64>,
+    pub kind: String,
+    pub cwd: String,
+    pub env_json: String,
+    pub title: String,
+    pub split_dir: String,
+    pub split_ratio: Option<f64>,
+    pub last_session_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
+pub struct JournalChunk {
+    pub seq: i64,
+    pub chunk: Vec<u8>,
+}
+
 /// Raw task row shape (13 columns, sqlx::query_as target).
 pub type TaskRow = (
     i64,
@@ -391,6 +450,64 @@ const MIGRATIONS: &[(i64, &str)] = &[
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL
         );
+        "#,
+    ),
+    (
+        8,
+        r#"
+        CREATE TABLE workspaces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+            name TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE tabs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            active_pane_id INTEGER,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE panes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tab_id INTEGER NOT NULL REFERENCES tabs(id) ON DELETE CASCADE,
+            terminal_id INTEGER,
+            kind TEXT NOT NULL DEFAULT 'shell',
+            cwd TEXT NOT NULL DEFAULT '',
+            env_json TEXT NOT NULL DEFAULT '{}',
+            title TEXT NOT NULL DEFAULT '',
+            split_dir TEXT NOT NULL DEFAULT '',
+            split_ratio REAL,
+            position INTEGER NOT NULL DEFAULT 0,
+            closed_at INTEGER,
+            last_session_id TEXT NOT NULL DEFAULT '',
+            degraded INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_tabs_workspace ON tabs (workspace_id, position);
+        CREATE INDEX idx_panes_tab ON panes (tab_id, position);
+
+        CREATE TABLE pane_journal (
+            pane_id INTEGER NOT NULL REFERENCES panes(id) ON DELETE CASCADE,
+            seq INTEGER NOT NULL,
+            chunk BLOB NOT NULL,
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY (pane_id, seq)
+        );
+
+        CREATE TABLE recovery_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kind TEXT NOT NULL,
+            state_json TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_recovery_kind ON recovery_snapshots (kind, created_at);
         "#,
     ),
 ];
@@ -834,6 +951,347 @@ impl Db {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    // ---- workspaces / tabs / panes (ADR 021) ----
+
+    pub async fn create_workspace(
+        &self,
+        project_id: Option<i64>,
+        name: &str,
+    ) -> DbResult<Workspace> {
+        let now = now_secs();
+        let id = sqlx::query(
+            "INSERT INTO workspaces (project_id, name, position, created_at)
+             SELECT ?, ?, COALESCE(MAX(position) + 1, 0), ? FROM workspaces",
+        )
+        .bind(project_id)
+        .bind(name)
+        .bind(now)
+        .execute(&self.pool)
+        .await?
+        .last_insert_rowid();
+        Ok(Workspace {
+            id,
+            project_id,
+            name: name.to_owned(),
+            position: 0,
+            created_at: now,
+        })
+    }
+
+    pub async fn list_workspaces(&self) -> DbResult<Vec<Workspace>> {
+        Ok(sqlx::query_as(
+            "SELECT id, project_id, name, position, created_at
+             FROM workspaces ORDER BY position, id",
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub async fn rename_workspace(&self, id: i64, name: &str) -> DbResult<()> {
+        sqlx::query("UPDATE workspaces SET name = ? WHERE id = ?")
+            .bind(name)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_workspace(&self, id: i64) -> DbResult<()> {
+        sqlx::query("DELETE FROM workspaces WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn create_tab(&self, workspace_id: i64, name: &str) -> DbResult<Tab> {
+        let now = now_secs();
+        let id = sqlx::query(
+            "INSERT INTO tabs (workspace_id, name, position, created_at)
+             SELECT ?, ?, COALESCE(MAX(position) + 1, 0), ? FROM tabs WHERE workspace_id = ?",
+        )
+        .bind(workspace_id)
+        .bind(name)
+        .bind(now)
+        .bind(workspace_id)
+        .execute(&self.pool)
+        .await?
+        .last_insert_rowid();
+        Ok(Tab {
+            id,
+            workspace_id,
+            name: name.to_owned(),
+            position: 0,
+            active_pane_id: None,
+            created_at: now,
+        })
+    }
+
+    pub async fn list_tabs(&self, workspace_id: i64) -> DbResult<Vec<Tab>> {
+        Ok(sqlx::query_as(
+            "SELECT id, workspace_id, name, position, active_pane_id, created_at
+             FROM tabs WHERE workspace_id = ? ORDER BY position, id",
+        )
+        .bind(workspace_id)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub async fn rename_tab(&self, id: i64, name: &str) -> DbResult<()> {
+        sqlx::query("UPDATE tabs SET name = ? WHERE id = ?")
+            .bind(name)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_tab(&self, id: i64) -> DbResult<()> {
+        sqlx::query("DELETE FROM tabs WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_active_pane(&self, tab_id: i64, pane_id: Option<i64>) -> DbResult<()> {
+        sqlx::query("UPDATE tabs SET active_pane_id = ? WHERE id = ?")
+            .bind(pane_id)
+            .bind(tab_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn create_pane(&self, pane: &NewPane) -> DbResult<Pane> {
+        let now = now_secs();
+        let id = sqlx::query(
+            "INSERT INTO panes (tab_id, terminal_id, kind, cwd, env_json, title,
+                                split_dir, split_ratio, position, last_session_id, created_at)
+             SELECT ?, ?, ?, ?, ?, ?, ?, ?,
+                    COALESCE(MAX(position) + 1, 0), ?, ?
+             FROM panes WHERE tab_id = ?",
+        )
+        .bind(pane.tab_id)
+        .bind(pane.terminal_id)
+        .bind(&pane.kind)
+        .bind(&pane.cwd)
+        .bind(&pane.env_json)
+        .bind(&pane.title)
+        .bind(&pane.split_dir)
+        .bind(pane.split_ratio)
+        .bind(&pane.last_session_id)
+        .bind(now)
+        .bind(pane.tab_id)
+        .execute(&self.pool)
+        .await?
+        .last_insert_rowid();
+        Ok(Pane {
+            id,
+            tab_id: pane.tab_id,
+            terminal_id: pane.terminal_id,
+            kind: pane.kind.clone(),
+            cwd: pane.cwd.clone(),
+            env_json: pane.env_json.clone(),
+            title: pane.title.clone(),
+            split_dir: pane.split_dir.clone(),
+            split_ratio: pane.split_ratio,
+            position: 0,
+            closed_at: None,
+            last_session_id: pane.last_session_id.clone(),
+            degraded: false,
+            created_at: now,
+        })
+    }
+
+    pub async fn list_panes(&self, tab_id: i64) -> DbResult<Vec<Pane>> {
+        Ok(sqlx::query_as(
+            "SELECT id, tab_id, terminal_id, kind, cwd, env_json, title, split_dir,
+                    split_ratio, position, closed_at, last_session_id, degraded, created_at
+             FROM panes WHERE tab_id = ? AND closed_at IS NULL ORDER BY position, id",
+        )
+        .bind(tab_id)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub async fn get_pane(&self, id: i64) -> DbResult<Option<Pane>> {
+        Ok(sqlx::query_as(
+            "SELECT id, tab_id, terminal_id, kind, cwd, env_json, title, split_dir,
+                    split_ratio, position, closed_at, last_session_id, degraded, created_at
+             FROM panes WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
+    pub async fn update_pane_layout(
+        &self,
+        id: i64,
+        split_dir: &str,
+        split_ratio: Option<f64>,
+        position: i64,
+    ) -> DbResult<()> {
+        sqlx::query("UPDATE panes SET split_dir = ?, split_ratio = ?, position = ? WHERE id = ?")
+            .bind(split_dir)
+            .bind(split_ratio)
+            .bind(position)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn rename_pane(&self, id: i64, title: &str) -> DbResult<()> {
+        sqlx::query("UPDATE panes SET title = ? WHERE id = ?")
+            .bind(title)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_pane_terminal(&self, id: i64, terminal_id: Option<i64>) -> DbResult<()> {
+        sqlx::query("UPDATE panes SET terminal_id = ? WHERE id = ?")
+            .bind(terminal_id)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_pane_session(&self, id: i64, session_id: &str) -> DbResult<()> {
+        sqlx::query("UPDATE panes SET last_session_id = ? WHERE id = ?")
+            .bind(session_id)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_pane_degraded(&self, id: i64, degraded: bool) -> DbResult<()> {
+        sqlx::query("UPDATE panes SET degraded = ? WHERE id = ?")
+            .bind(degraded)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Soft-close: keeps the row (and journal) for restore-until-prune.
+    pub async fn close_pane(&self, id: i64) -> DbResult<()> {
+        let now = now_secs();
+        sqlx::query("UPDATE panes SET closed_at = ?, terminal_id = NULL WHERE id = ?")
+            .bind(now)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    // ---- pane journal (ADR 021 tier 2) ----
+
+    /// Append one journal chunk. Returns the assigned seq.
+    pub async fn journal_append(&self, pane_id: i64, chunk: &[u8]) -> DbResult<i64> {
+        let now = now_secs();
+        let seq: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(seq) + 1, 0) FROM pane_journal WHERE pane_id = ?",
+        )
+        .bind(pane_id)
+        .fetch_one(&self.pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO pane_journal (pane_id, seq, chunk, created_at) VALUES (?, ?, ?, ?)",
+        )
+        .bind(pane_id)
+        .bind(seq)
+        .bind(chunk)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(seq)
+    }
+
+    /// Bounded replay: chunks strictly after `after_seq`, oldest first.
+    pub async fn journal_read(&self, pane_id: i64, after_seq: i64) -> DbResult<Vec<JournalChunk>> {
+        Ok(sqlx::query_as(
+            "SELECT seq, chunk FROM pane_journal
+             WHERE pane_id = ? AND seq > ? ORDER BY seq",
+        )
+        .bind(pane_id)
+        .bind(after_seq)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub async fn journal_max_seq(&self, pane_id: i64) -> DbResult<i64> {
+        Ok(
+            sqlx::query_scalar("SELECT COALESCE(MAX(seq), -1) FROM pane_journal WHERE pane_id = ?")
+                .bind(pane_id)
+                .fetch_one(&self.pool)
+                .await?,
+        )
+    }
+
+    /// Enforce the per-pane byte cap: delete oldest rows until under cap.
+    pub async fn journal_evict(&self, pane_id: i64, cap_bytes: i64) -> DbResult<i64> {
+        let mut tx = self.pool.begin().await?;
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(LENGTH(chunk)), 0) FROM pane_journal WHERE pane_id = ?",
+        )
+        .bind(pane_id)
+        .fetch_one(&mut *tx)
+        .await?;
+        let mut evicted = 0i64;
+        let mut excess = total - cap_bytes;
+        while excess > 0 {
+            let oldest: Option<(i64, i64)> = sqlx::query_as(
+                "SELECT seq, LENGTH(chunk) FROM pane_journal WHERE pane_id = ? ORDER BY seq LIMIT 1",
+            )
+            .bind(pane_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+            let Some((seq, size)) = oldest else { break };
+            sqlx::query("DELETE FROM pane_journal WHERE pane_id = ? AND seq = ?")
+                .bind(pane_id)
+                .bind(seq)
+                .execute(&mut *tx)
+                .await?;
+            evicted += 1;
+            excess -= size;
+        }
+        tx.commit().await?;
+        Ok(evicted)
+    }
+
+    // ---- recovery snapshots ----
+
+    pub async fn snapshot_save(&self, kind: &str, state_json: &str) -> DbResult<()> {
+        let now = now_secs();
+        sqlx::query(
+            "INSERT INTO recovery_snapshots (kind, state_json, created_at) VALUES (?, ?, ?)",
+        )
+        .bind(kind)
+        .bind(state_json)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Newest snapshot of `kind`, if any.
+    pub async fn snapshot_latest(&self, kind: &str) -> DbResult<Option<String>> {
+        Ok(sqlx::query_scalar(
+            "SELECT state_json FROM recovery_snapshots WHERE kind = ?
+             ORDER BY created_at DESC, id DESC LIMIT 1",
+        )
+        .bind(kind)
+        .fetch_optional(&self.pool)
+        .await?)
     }
 }
 

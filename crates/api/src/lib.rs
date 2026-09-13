@@ -22,6 +22,7 @@ pub mod integration_routes;
 pub mod node_routes;
 pub mod notification_routes;
 pub mod platform_routes;
+pub mod plugin_routes;
 
 /// Small error wrapper shared by route modules (avoids `result_large_err`).
 #[derive(Debug)]
@@ -68,6 +69,8 @@ pub mod service_routes;
 pub mod task_routes;
 pub mod terminal_routes;
 pub mod workflow_routes;
+pub mod workspace_engine;
+pub mod workspace_routes;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_assets.rs"));
 
@@ -267,11 +270,13 @@ pub fn build_router(state: AppState) -> Router {
         .merge(notification_routes::routes())
         .merge(platform_routes::routes())
         .merge(integration_routes::routes())
+        .merge(plugin_routes::routes())
         .merge(file_routes::routes())
         .merge(rbac_routes::routes())
         .merge(task_routes::routes())
         .merge(service_routes::routes())
         .merge(workflow_routes::routes())
+        .merge(workspace_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,

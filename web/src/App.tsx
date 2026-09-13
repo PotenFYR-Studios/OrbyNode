@@ -10,6 +10,8 @@ import {
   type WorkflowRun,
 } from "./api";
 import { RealtimeClient } from "./realtime";
+import { WorkspacesPage } from "./WorkspacesPage";
+import { PluginsPage } from "./PluginsPage";
 
 interface State {
   health?: Health;
@@ -22,12 +24,16 @@ interface State {
   workflow?: WorkflowRun;
 }
 
+type Page = "dashboard" | "workspaces" | "plugins";
+
 export function App() {
+  const [page, setPage] = useState<Page>("workspaces");
   const [state, setState] = useState<State>({
     attention: [],
     nodes: [],
     sessions: [],
   });
+  const [realtime] = useState(() => new RealtimeClient());
 
   useEffect(() => {
     if (!("Notification" in window)) return;
@@ -44,20 +50,20 @@ export function App() {
     Promise.all([api.hostMetrics(), api.sessionMetrics()])
       .then(([host, sessions]) => setState((current) => ({ ...current, host, sessions })))
       .catch(() => setState((current) => ({ ...current, sessions: [] })));
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     api
       .latestWorkflow()
       .then((workflow) => setState((current) => ({ ...current, workflow: workflow ?? undefined })))
       .catch(() => setState((current) => ({ ...current, workflow: undefined })));
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     api.nodes()
       .then((nodes) => setState((current) => ({ ...current, nodes })))
       .catch(() => setState((current) => ({ ...current, nodes: [] })));
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     let mounted = true;
@@ -71,7 +77,9 @@ export function App() {
     };
     void sync();
 
-    const realtime = new RealtimeClient();
+    realtime.connect();
+    realtime.sub("attention");
+    realtime.sub("notifications");
     const removeListener = realtime.on("attention", (event) => {
       if (event.etype === "attention.resolved") {
         const resolved = (event.data as { id?: number }).id;
@@ -83,9 +91,6 @@ export function App() {
       }
       void sync();
     });
-    realtime.connect();
-    realtime.sub("attention");
-    realtime.sub("notifications");
     const removeNotificationListener = realtime.on("notifications", (event) => {
       const data = event.data as { summary?: string; priority?: string };
       if ("Notification" in window && Notification.permission === "granted") {
@@ -98,8 +103,18 @@ export function App() {
       mounted = false;
       removeListener();
       removeNotificationListener();
-      realtime.close();
     };
+  }, [realtime]);
+
+  // Poll health lightly while the tab is open (status pill only).
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void api
+        .health()
+        .then((health) => setState((current) => ({ ...current, health, error: undefined })))
+        .catch((e: unknown) => setState((current) => ({ ...current, error: String(e) })));
+    }, 15_000);
+    return () => window.clearInterval(id);
   }, []);
 
   const resolve = async (id: number) => {
@@ -110,151 +125,162 @@ export function App() {
     }));
   };
 
+  const critical = state.attention.filter((a) => a.priority === "P0Security").length;
+
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 640, margin: "4rem auto", padding: "0 1rem" }}>
-      <h1>OrbyNode</h1>
-      <p>The self-hosted control plane for coding agents.</p>
-      {state.error && <p role="alert">Daemon unreachable: {state.error}</p>}
-      <section aria-labelledby="attention-heading">
-        <h2 id="attention-heading">Attention Center</h2>
-        {state.attention.length === 0 ? (
-          <p>Nothing needs you right now.</p>
-        ) : (
-          <ul>
-            {state.attention.map((item) => (
-              <li key={item.id}>
-                <strong>{item.priority}</strong> - {item.summary}
-                <button type="button" onClick={() => void resolve(item.id)}>
-                  Resolve
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <section aria-labelledby="workflows-heading">
-        <h2 id="workflows-heading">Workflows</h2>
-        {state.workflow ? (
-          <p>
-            <strong>{state.workflow.status}</strong> - {state.workflow.current_stage}
-            {state.workflow.status === "waiting_approval" && (
-              <button
-                type="button"
-                onClick={() => {
-                  const id = state.workflow?.id;
-                  if (!id) return;
-                  void api
-                    .approveWorkflow(id)
-                    .then((workflow) => setState((current) => ({ ...current, workflow })))
-                    .catch(() => undefined);
-                }}
-              >
-                Approve
-              </button>
-            )}
-          </p>
-        ) : (
+    <div className="app-shell">
+      <nav className="app-nav" aria-label="Primary">
+        <span className="app-brand">◈ ORBYNODE</span>
+        {(["workspaces", "dashboard", "plugins"] as Page[]).map((p) => (
           <button
+            key={p}
             type="button"
-            onClick={() =>
-              void api
-                .startWorkflow("delivery")
-                .then((workflow) => setState((current) => ({ ...current, workflow })))
-                .catch(() => undefined)
-            }
+            className={`nav-link ${page === p ? "active" : ""}`}
+            onClick={() => setPage(p)}
           >
-            Start delivery workflow
+            {p === "workspaces" ? "Workspaces" : p === "dashboard" ? "Dashboard" : "Plugins"}
           </button>
+        ))}
+        <span className="nav-status">
+          {state.health && (
+            <span className={`status-pill ${state.health.status === "ok" ? "ok" : ""}`}>
+              {state.health.status}
+            </span>
+          )}
+          {state.version && <span>v{state.version.version}</span>}
+          {critical > 0 && <span className="badge badge-warn">{critical} critical</span>}
+        </span>
+      </nav>
+
+      <main className="app-main">
+        {state.error && <p role="alert" className="error-banner">Daemon unreachable: {state.error}</p>}
+
+        {page === "workspaces" && <WorkspacesPage realtime={realtime} />}
+
+        {page === "plugins" && <PluginsPage />}
+
+        {page === "dashboard" && (
+          <div className="dash-grid">
+            <section className="card" aria-labelledby="attention-heading">
+              <h2 id="attention-heading">Attention Center</h2>
+              {state.attention.length === 0 ? (
+                <p>Nothing needs you right now.</p>
+              ) : (
+                state.attention.map((item) => (
+                  <div key={item.id} className="attention-item">
+                    <span className={`badge ${item.priority === "P0Security" ? "badge-warn" : ""}`}>
+                      {item.priority}
+                    </span>
+                    <span>{item.summary}</span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-small"
+                      style={{ marginLeft: "auto" }}
+                      onClick={() => void resolve(item.id)}
+                    >
+                      Resolve
+                    </button>
+                  </div>
+                ))
+              )}
+            </section>
+
+            <section className="card">
+              <h2>Host</h2>
+              {state.host ? (
+                <>
+                  <div className="metric-row">
+                    <span>CPU</span>
+                    <span>{state.host.cpu_percent.toFixed(1)}%</span>
+                  </div>
+                  <div className="metric-bar">
+                    <div
+                      className="metric-fill"
+                      style={{ width: `${Math.min(100, state.host.cpu_percent)}%` }}
+                    />
+                  </div>
+                  <div className="metric-row">
+                    <span>Memory</span>
+                    <span>
+                      {Math.round(state.host.mem_used_bytes / 1024 / 1024)} /{" "}
+                      {Math.round(state.host.mem_total_bytes / 1024 / 1024)} MB
+                    </span>
+                  </div>
+                  <div className="metric-row">
+                    <span>Load</span>
+                    <span>{state.host.load_avg[0].toFixed(2)}</span>
+                  </div>
+                </>
+              ) : (
+                <p>Host metrics unavailable.</p>
+              )}
+              {state.workflow && (
+                <div className="metric-row">
+                  <span>Workflow</span>
+                  <span>
+                    {state.workflow.status === "waiting_approval" ? (
+                      <button
+                        type="button"
+                        className="btn btn-small"
+                        onClick={() => {
+                          const id = state.workflow?.id;
+                          if (!id) return;
+                          void api
+                            .approveWorkflow(id)
+                            .then((workflow) => setState((current) => ({ ...current, workflow })))
+                            .catch(() => undefined);
+                        }}
+                      >
+                        Approve {state.workflow.current_stage}
+                      </button>
+                    ) : (
+                      state.workflow.status
+                    )}
+                  </span>
+                </div>
+              )}
+            </section>
+
+            <section className="card">
+              <h2>Remote Nodes</h2>
+              {state.nodes.length === 0 ? (
+                <p>No remote nodes paired.</p>
+              ) : (
+                state.nodes.map((node) => (
+                  <div key={node.id} className="metric-row">
+                    <span>{node.name}</span>
+                    <span
+                      className={`badge ${node.status === "online" ? "" : "badge-warn"}`}
+                    >
+                      {node.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </section>
+
+            <section className="card">
+              <h2>Sessions</h2>
+              {state.sessions.length === 0 ? (
+                <p>No active sessions.</p>
+              ) : (
+                state.sessions.map((session) => (
+                  <div key={session.terminal_id} className="metric-row">
+                    <span>
+                      terminal {session.terminal_id}
+                      {session.process ? ` · ${session.process}` : ""}
+                    </span>
+                    <span>
+                      {session.cpu_percent.toFixed(1)}% ·{" "}
+                      {Math.round(session.rss_bytes / 1024 / 1024)} MB
+                    </span>
+                  </div>
+                ))
+              )}
+            </section>
+          </div>
         )}
-      </section>
-      <section aria-labelledby="nodes-heading">
-        <h2 id="nodes-heading">Remote Nodes</h2>
-        {state.nodes.length === 0 ? (
-          <p>No remote nodes paired.</p>
-        ) : (
-          <ul>
-            {state.nodes.map((node) => (
-              <li key={node.id}>
-                <strong>{node.name}</strong> - {node.status}
-                {node.agents.length > 0 && (
-                  <ul>
-                    {node.agents.map((agent) => (
-                      <li key={`${node.id}:${String(agent.terminal_id)}`}>
-                        {String(agent.kind)} on terminal {String(agent.terminal_id)}: {String(agent.state)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <section aria-labelledby="observability-heading">
-        <h2 id="observability-heading">Observability</h2>
-        {state.host ? (
-          <p>
-            CPU {state.host.cpu_percent.toFixed(1)}% · RAM{" "}
-            {Math.round(state.host.mem_used_bytes / 1024 / 1024)} /{" "}
-            {Math.round(state.host.mem_total_bytes / 1024 / 1024)} MB · load{" "}
-            {state.host.load_avg[0].toFixed(2)}
-          </p>
-        ) : (
-          <p>Host metrics unavailable.</p>
-        )}
-        {state.sessions.length > 0 && (
-          <table>
-            <thead>
-              <tr>
-                <th>Terminal</th>
-                <th>CPU</th>
-                <th>RAM</th>
-                <th>Runtime</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.sessions.map((session) => (
-                <tr key={session.terminal_id}>
-                  <td>{session.terminal_id}</td>
-                  <td>{session.cpu_percent.toFixed(1)}%</td>
-                  <td>{Math.round(session.rss_bytes / 1024 / 1024)} MB</td>
-                  <td>{session.runtime_secs}s</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-      <section aria-labelledby="notifications-heading">
-        <h2 id="notifications-heading">Notifications</h2>
-        <button
-          type="button"
-          onClick={() =>
-            void api
-              .upsertNotificationRule({
-                event: "attention.created",
-                channel: "webhook",
-                target: "https://example.invalid/hook",
-                enabled: true,
-              })
-              .catch(() => undefined)
-          }
-        >
-          Add test webhook rule
-        </button>
-      </section>
-      {state.health && (
-        <dl>
-          <dt>Status</dt>
-          <dd>{state.health.status}</dd>
-          <dt>Uptime</dt>
-          <dd>{state.health.uptime_secs}s</dd>
-          <dt>Version</dt>
-          <dd>
-            {state.version?.name} {state.version?.version}
-          </dd>
-        </dl>
-      )}
-    </main>
+      </main>
+    </div>
   );
 }

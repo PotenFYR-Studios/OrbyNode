@@ -1,9 +1,13 @@
 name: Release
 
+# Builds on every push to main and on version tags. Tag pushes create or
+# refresh the GitHub release; same-tag re-runs replace assets in place and
+# regenerate the changelog body (no duplicate releases).
+
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -20,8 +24,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # First-class targets (Plan §3). musl adds portable Linux installs.
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
             archive: tar.gz
           - os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
@@ -35,10 +43,8 @@ jobs:
           - os: windows-2022
             target: x86_64-pc-windows-msvc
             archive: zip
-          - os: windows-2022
-            target: aarch64-pc-windows-msvc
-            archive: zip
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -48,8 +54,112 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: (cd web && bun install)
+      - run: (cd web && bun install --frozen-lockfile)
       - run: (cd web && bun run build)
+      # aarch64-linux builds cross-compile from the x86_64 runner and need a
+      # matching C linker; macOS targets build on matching-arch runners.
+      - name: Install cross linker (aarch64-linux)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Configure cross linker environment (aarch64-linux)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: cargo build --release --locked -p orbynode-daemon --target ${{ matrix.target }}
+      - name: Create SBOM
+        shell: bash
+        run: |
+          mkdir -p dist
+          cargo tree --locked --workspace > "dist/orbynode-${{ matrix.target }}-sbom.txt"
+      - name: Archive daemon
+        shell: bash
+        run: |
+          mkdir -p dist
+          # Archive bundles the daemon plus the matching uninstaller so each
+          # artifact is self-contained for the installer-build path.
+          if [ "${{ matrix.archive }}" = zip ]; then
+            7z a "dist/orbynode-${{ matrix.target }}.zip" \
+              "target/${{ matrix.target }}/release/orbynode-daemon.exe" \
+              "$(pwd)/scripts/uninstall.ps1"
+          else
+            tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" \
+              -C "target/${{ matrix.target }}/release" "orbynode-daemon" \
+              -C "$(pwd)/scripts" "uninstall.sh"
+          fi
+      - name: Checksums
+        shell: bash
+        run: |
+          cd dist
+          if [ "${{ matrix.archive }}" = zip ]; then sha256sum "orbynode-${{ matrix.target }}.zip" > "orbynode-${{ matrix.target }}.zip.sha256"; else shasum -a 256 "orbynode-${{ matrix.target }}.tar.gz" > "orbynode-${{ matrix.target }}.tar.gz.sha256"; fi
+          sha256sum "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
+      - name: Verify locked build inputs
+        shell: bash
+        run: |
+          cargo metadata --locked --format-version 1 > /dev/null
+          test -f web/bun.lock
+      - name: Sign artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: sigstore/cosign-installer@v3
+      - name: Cosign sign
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          file="dist/orbynode-${{ matrix.target }}.${{ matrix.archive }}"
+          cosign sign-blob --yes --output-signature "${file}.sig" --output-certificate "${file}.pem" "$file"
+        env:
+          COSIGN_CERTIFICATE_IDENTITY: ${{ github.repository_owner }}
+          COSIGN_CERTIFICATE_OIDC_ISSUER: https://token.actions.githubusercontent.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orbynode-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  # Full matrix runs only for tags; branch pushes ship the trimmed matrix.
+  build-extended:
+    name: ${{ matrix.target }} (extended)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            archive: tar.gz
+          - os: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+          - os: macos-14
+            target: x86_64-apple-darwin
+            archive: tar.gz
+          - os: windows-2022
+            target: aarch64-pc-windows-msvc
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: (cd web && bun install --frozen-lockfile)
+      - run: (cd web && bun run build)
+      - name: Install cross linker (aarch64-linux)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Configure cross linker environment (aarch64-linux)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: cargo build --release --locked -p orbynode-daemon --target ${{ matrix.target }}
       - name: Create SBOM
         shell: bash
@@ -61,9 +171,13 @@ jobs:
         run: |
           mkdir -p dist
           if [ "${{ matrix.archive }}" = zip ]; then
-            7z a "dist/orbynode-${{ matrix.target }}.zip" "target/${{ matrix.target }}/release/orbynode-daemon${{ runner.os == 'Windows' && '.exe' || '' }}"
+            7z a "dist/orbynode-${{ matrix.target }}.zip" \
+              "target/${{ matrix.target }}/release/orbynode-daemon.exe" \
+              scripts/uninstall.ps1
           else
-            tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" -C "target/${{ matrix.target }}/release" "orbynode-daemon${{ runner.os == 'Windows' && '.exe' || '' }}"
+            tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" \
+              -C "target/${{ matrix.target }}/release" "orbynode-daemon" \
+              -C "$(pwd)/scripts" "uninstall.sh"
           fi
       - name: Checksums
         shell: bash
@@ -71,34 +185,92 @@ jobs:
           cd dist
           if [ "${{ matrix.archive }}" = zip ]; then sha256sum "orbynode-${{ matrix.target }}.zip" > "orbynode-${{ matrix.target }}.zip.sha256"; else shasum -a 256 "orbynode-${{ matrix.target }}.tar.gz" > "orbynode-${{ matrix.target }}.tar.gz.sha256"; fi
           sha256sum "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
-      - name: Sign artifact
-        uses: sigstore/cosign-installer@v3
-      - name: Verify locked build inputs
-        shell: bash
-        run: |
-          cargo metadata --locked --format-version 1 > /dev/null
-          test -f web/bun.lock
+      - uses: sigstore/cosign-installer@v3
       - name: Cosign sign
         shell: bash
         run: |
           file="dist/orbynode-${{ matrix.target }}.${{ matrix.archive }}"
           cosign sign-blob --yes --output-signature "${file}.sig" --output-certificate "${file}.pem" "$file"
+        env:
+          COSIGN_CERTIFICATE_IDENTITY: ${{ github.repository_owner }}
+          COSIGN_CERTIFICATE_OIDC_ISSUER: https://token.actions.githubusercontent.com
       - uses: actions/upload-artifact@v4
         with:
           name: orbynode-${{ matrix.target }}
           path: dist/*
           if-no-files-found: error
 
+  # Standalone installer artifacts: curl-path and installer-build path both
+  # resolve to these assets. Published on tags; refreshed on same-version re-run.
+  installers:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, build-extended]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect installer scripts
+        run: |
+          mkdir -p dist
+          for f in install.sh install.ps1 uninstall.sh uninstall.ps1; do
+            cp "scripts/$f" "dist/orbynode-$f"
+            sha256sum "scripts/$f" | sed "s|scripts/|orbynode-|" > "dist/orbynode-$f.sha256"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orbynode-installers
+          path: dist/*
+          if-no-files-found: error
+
   release:
-    needs: build
+    needs: [build, build-extended, installers]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
           path: dist
+      - name: Generate changelog body
+        id: notes
+        shell: bash
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          prev="$(git describe --tags --abbrev=0 "${tag}^" 2>/dev/null || git describe --tags --abbrev=0 2>/dev/null || true)"
+          {
+            echo "body<<EOF"
+            echo "## ${tag}"
+            echo ""
+            if [ -n "$prev" ] && [ "$prev" != "$tag" ]; then
+              echo "**Changes since ${prev}:**"
+              echo ""
+              git log --no-decorate --oneline "${prev}..${tag}" | head -50
+              echo ""
+              echo "**Full changelog:** https://github.com/${GITHUB_REPOSITORY}/compare/${prev}...${tag}"
+            else
+              echo "First release."
+            fi
+            echo ""
+            echo "## Install"
+            echo ""
+            echo '### curl (one command)'
+            echo '```sh'
+            echo 'curl -fsSL https://raw.githubusercontent.com/'"${GITHUB_REPOSITORY}"'/main/scripts/install.sh | sh'
+            echo '```'
+            echo '### installer build'
+            echo 'Download `orbynode-install.sh` (or `orbynode-install.ps1` on Windows) from this release and run it; verify with the `.sha256` next to it.'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      # Clobbers: re-running the same tag replaces assets and refreshes the
+      # body instead of failing or creating a duplicate release.
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          tag_name: ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
           files: dist/*
+          overwrite_files: true
+          make_latest: true

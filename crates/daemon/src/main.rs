@@ -17,6 +17,19 @@ async fn main() {
         .unwrap_or_else(|e| panic!("cannot open database: {e}"));
     tracing::info!(dir = %cfg.data_dir.display(), "database ready");
 
+    // ADR 021: restore shape before serving requests.
+    let engine =
+        orbynode_api::workspace_engine::WorkspaceEngine::new(db.clone(), Default::default());
+    let report = engine.restore().await;
+    tracing::info!(
+        workspaces = report.workspaces,
+        tabs = report.tabs,
+        panes = report.panes,
+        degraded = report.degraded,
+        resumed_agents = report.resumed_agents,
+        "workspace restore complete"
+    );
+
     let terminals =
         orbynode_terminal::TerminalManager::new(orbynode_terminal::TerminalConfig::default());
     let realtime = Arc::new(orbynode_realtime::EventBus::new(

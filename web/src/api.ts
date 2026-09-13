@@ -1,5 +1,7 @@
 /** Typed client for the daemon REST API. */
 
+import type { Pane, WorkspaceWithTabs } from "./workspace";
+
 export interface Health {
   status: string;
   uptime_secs: number;
@@ -116,5 +118,13 @@ export const api = {
   resolveAttention: async (id: number) => {
     const res = await fetch(`/attention/${id}/resolve`, { method: "POST" });
     if (!res.ok) throw new Error(`attention/${id}/resolve: ${res.status}`);
+  },
+  listWorkspaces: async () => {
+    const data = await getJson<{ workspaces: WorkspaceWithTabs[] }>("/workspaces");
+    return data.workspaces;
+  },
+  listPanes: async (tabId: number) => {
+    const data = await getJson<Pane[]>(`/tabs/${tabId}/panes`);
+    return data;
   },
 };
