@@ -1,0 +1,13 @@
+[package]
+name = "orbynode-workflows"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+orbynode-database = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+tokio = { workspace = true, features = ["process"] }
+tracing = { workspace = true }

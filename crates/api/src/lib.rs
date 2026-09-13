@@ -1,4 +1,4 @@
-//! OrbyNode HTTP API — REST endpoints and embedded web UI delivery (ADR 003, ADR 006).
+//! OrbyNode HTTP API - REST endpoints and embedded web UI delivery (ADR 003, ADR 006).
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,10 +13,13 @@ use serde_json::json;
 use tower_http::trace::TraceLayer;
 
 pub mod agent_routes;
+pub mod attention_routes;
 pub mod auth_routes;
 pub mod file_routes;
 pub mod gateway;
 pub mod integration_routes;
+pub mod node_routes;
+pub mod notification_routes;
 
 /// Small error wrapper shared by route modules (avoids `result_large_err`).
 #[derive(Debug)]
@@ -62,6 +65,7 @@ pub mod rbac_routes;
 pub mod service_routes;
 pub mod task_routes;
 pub mod terminal_routes;
+pub mod workflow_routes;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_assets.rs"));
 
@@ -83,7 +87,11 @@ pub struct AppState {
     pub db: orbynode_database::Db,
     pub auth: Arc<orbynode_auth::AuthService>,
     pub detector: Arc<orbynode_agents::AgentDetector>,
+    pub attention: Arc<orbynode_agents::attention::AttentionCenter>,
+    pub nodes: Arc<orbynode_nodes::NodeRegistry>,
+    pub notifications: Arc<orbynode_notifications::NotificationService>,
     pub service_registry: Arc<orbynode_services::ServiceRegistry>,
+    pub workflows: Arc<orbynode_workflows::WorkflowEngine>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -99,12 +107,26 @@ impl AppState {
         realtime: Arc<orbynode_realtime::EventBus>,
         db: orbynode_database::Db,
     ) -> Self {
+        let notifications = Arc::new(orbynode_notifications::NotificationService::new());
         AppState {
             started_at: Instant::now(),
             web,
             terminals,
             detector: Arc::new(orbynode_agents::AgentDetector::new((*realtime).clone())),
+            attention: {
+                let notifications = notifications.clone();
+                Arc::new(
+                    orbynode_agents::attention::AttentionCenter::new((*realtime).clone())
+                        .with_notify(std::sync::Arc::new(move |item| {
+                            let notifications = notifications.clone();
+                            tokio::spawn(async move { notifications.send(item).await });
+                        })),
+                )
+            },
+            nodes: Arc::new(orbynode_nodes::NodeRegistry::new(db.clone())),
+            notifications,
             service_registry: Arc::new(orbynode_services::ServiceRegistry::new()),
+            workflows: Arc::new(orbynode_workflows::WorkflowEngine::new(db.clone())),
             realtime,
             auth: Arc::new(orbynode_auth::AuthService::new(db.clone())),
             db,
@@ -132,6 +154,7 @@ impl AppState {
         };
         let bus = self.realtime.clone();
         let detector = self.detector.clone();
+        let attention = self.attention.clone();
         let stream = orbynode_realtime::Stream::new(format!("terminal:{id}"));
         let mut rx = term.subscribe();
         tokio::spawn(async move {
@@ -144,7 +167,9 @@ impl AppState {
                     priority: orbynode_realtime::Priority::Droppable,
                     bytes,
                 };
-                detector.observe(&event).await;
+                if let Some(agent_event) = detector.observe(&event).await {
+                    attention.observe(&agent_event).await;
+                }
                 bus.publish(event);
             }
             detector.mark_exited(id).await;
@@ -199,17 +224,32 @@ impl Default for AppState {
         let realtime = Arc::new(orbynode_realtime::EventBus::new(
             orbynode_realtime::ReplayConfig::default(),
         ));
+        let db = test_db();
+        let notifications = Arc::new(orbynode_notifications::NotificationService::new());
         AppState {
             started_at: Instant::now(),
             web: WebSource::Embedded,
             terminals: orbynode_terminal::TerminalManager::new(
                 orbynode_terminal::TerminalConfig::default(),
             ),
+            attention: {
+                let notifications = notifications.clone();
+                Arc::new(
+                    orbynode_agents::attention::AttentionCenter::new((*realtime).clone())
+                        .with_notify(std::sync::Arc::new(move |item| {
+                            let sender = notifications.clone();
+                            tokio::spawn(async move { sender.send(item).await });
+                        })),
+                )
+            },
+            nodes: Arc::new(orbynode_nodes::NodeRegistry::new(db.clone())),
+            notifications,
             realtime: Arc::clone(&realtime),
             db: test_db(),
             auth: Arc::new(orbynode_auth::AuthService::new(test_db())),
             detector: Arc::new(orbynode_agents::AgentDetector::new((*realtime).clone())),
             service_registry: Arc::new(orbynode_services::ServiceRegistry::new()),
+            workflows: Arc::new(orbynode_workflows::WorkflowEngine::new(db.clone())),
         }
     }
 }
@@ -220,11 +260,15 @@ pub fn build_router(state: AppState) -> Router {
         .merge(gateway::routes())
         .merge(project_routes::routes())
         .merge(agent_routes::routes())
+        .merge(attention_routes::routes())
+        .merge(node_routes::routes())
+        .merge(notification_routes::routes())
         .merge(integration_routes::routes())
         .merge(file_routes::routes())
         .merge(rbac_routes::routes())
         .merge(task_routes::routes())
         .merge(service_routes::routes())
+        .merge(workflow_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,
@@ -394,5 +438,15 @@ mod tests {
     async fn missing_asset_404s() {
         let (status, _) = get("/missing-9ab.js").await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn attention_requires_authentication() {
+        let app = build_router(AppState::default());
+        let response = app
+            .oneshot(HttpRequest::get("/attention").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }

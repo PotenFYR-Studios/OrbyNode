@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth", "crates/agents", "crates/integrations", "crates/files", "crates/services"]
+members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth", "crates/agents", "crates/integrations", "crates/files", "crates/services", "crates/nodes", "crates/notifications", "crates/workflows"]
 exclude = ["desktop/tauri"]
 
 [workspace.package]
@@ -19,6 +19,12 @@ orbynode-database = { path = "crates/database" }
 orbynode-realtime = { path = "crates/realtime" }
 orbynode-services = { path = "crates/services" }
 orbynode-api = { path = "crates/api" }
+orbynode-nodes = { path = "crates/nodes" }
+orbynode-notifications = { path = "crates/notifications" }
+orbynode-workflows = { path = "crates/workflows" }
+anyhow = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+sha2 = "0.10"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync", "time", "io-util"] }
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }

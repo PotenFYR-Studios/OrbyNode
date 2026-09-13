@@ -1,7 +1,6 @@
-# OrbyNode — Roadmap
+# OrbyNode - Roadmap
 
-Milestones come from `Plan.md` §123–§143; the ordering is deliberate
-(runtime correctness and realtime architecture before feature surface — §153).
+(runtime correctness and realtime architecture before feature surface - §153).
 This file tracks status; the plan holds the detail.
 
 ## Milestones
@@ -20,15 +19,15 @@ This file tracks status; the plan holds the detail.
 | 9  | Tasks and Worktrees        | ✅ Done          |
 | 10 | Services and Previews      | ✅ Done          |
 | 11 | Multi-User RBAC            | ✅ Done          |
-| 12 | Attention Center           | Next            |
-| 13 | Remote Nodes               | —               |
-| 14 | Observability              | —               |
-| 15 | Notifications              | —               |
-| 16 | Workflows                  | —               |
-| 17 | API, MCP, Plugin Foundation| —               |
-| 18 | Scale Validation           | —               |
-| 19 | Security Hardening         | —               |
-| 20 | Release Engineering        | —               |
+| 12 | Attention Center           | ✅ Done          |
+| 13 | Remote Nodes               | ✅ Done          |
+| 14 | Observability              | ✅ Done          |
+| 15 | Notifications              | ✅ Done          |
+| 16 | Workflows                  | ✅ Done          |
+| 17 | API, MCP, Plugin Foundation| Not started |
+| 18 | Scale Validation           | Not started |
+| 19 | Security Hardening         | Not started |
+| 20 | Release Engineering        | Not started |
 
 ## Definition of done
 

@@ -22,7 +22,11 @@ orbynode-integrations = { workspace = true }
 orbynode-auth = { workspace = true }
 orbynode-database = { workspace = true }
 orbynode-realtime = { workspace = true }
+anyhow = { workspace = true }
+orbynode-nodes = { workspace = true }
+orbynode-notifications = { workspace = true }
 orbynode-services = { workspace = true }
+orbynode-workflows = { workspace = true }
 orbynode-terminal = { workspace = true }
 
 [dev-dependencies]
