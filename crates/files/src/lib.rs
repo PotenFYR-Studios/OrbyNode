@@ -224,11 +224,11 @@ mod tests {
 
     #[test]
     fn symlink_escape_is_rejected() {
-        let (w, root) = ws("symlink");
-        let outside = tmp_root("symlink-outside");
-        std::fs::write(outside.join("secret.txt"), "top secret").unwrap();
         #[cfg(unix)]
         {
+            let (w, root) = ws("symlink");
+            let outside = tmp_root("symlink-outside");
+            std::fs::write(outside.join("secret.txt"), "top secret").unwrap();
             std::os::unix::fs::symlink(&outside, root.join("linked")).unwrap();
             match w.read("linked/secret.txt") {
                 Err(FilesError::OutsideRoot) => {}
