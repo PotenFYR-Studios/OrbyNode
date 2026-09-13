@@ -15,8 +15,8 @@ This file tracks status; the plan holds the detail.
 | 4  | Setup and Authentication   | ✅ Done          |
 | 5  | Native Desktop/Tray        | ✅ Done          |
 | 6  | Agent Detection            | ✅ Done          |
-| 7  | Agent Integrations         | Next            |
-| 8  | Files and Git              | —               |
+| 7  | Agent Integrations         | ✅ Done          |
+| 8  | Files and Git              | Next            |
 | 9  | Tasks and Worktrees        | —               |
 | 10 | Services and Previews      | —               |
 | 11 | Multi-User RBAC            | —               |
