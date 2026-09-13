@@ -17,8 +17,8 @@ This file tracks status; the plan holds the detail.
 | 6  | Agent Detection            | ✅ Done          |
 | 7  | Agent Integrations         | ✅ Done          |
 | 8  | Files and Git              | ✅ Done          |
-| 9  | Tasks and Worktrees        | Next            |
-| 10 | Services and Previews      | —               |
+| 9  | Tasks and Worktrees        | ✅ Done          |
+| 10 | Services and Previews      | Next            |
 | 11 | Multi-User RBAC            | —               |
 | 12 | Attention Center           | —               |
 | 13 | Remote Nodes               | —               |
