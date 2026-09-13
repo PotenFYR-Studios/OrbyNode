@@ -25,6 +25,8 @@
   require the `X-Orbynode-CSRF` header to match the per-session token issued
   at login. WebSocket `sub` messages are authorized by the session bound at
   upgrade time; the gateway revalidates on each subscription.
+- **Response hardening:** strict CSP, frame denial, `nosniff`, `no-referrer`,
+  and restrictive permissions-policy headers apply to every response.
 - **Setup:** `POST /setup` creates the first Owner **only** when the users
   table is empty; further calls are 403. `GET /setup` reports whether setup is
   pending (wizard gating).
