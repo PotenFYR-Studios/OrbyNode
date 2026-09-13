@@ -10,10 +10,10 @@ come back later: everything keeps running and reconnects cleanly.
 
 ## Quick start (from source)
 
-Requirements: Rust 1.85+, Node 20+.
+Requirements: Rust 1.85+, Bun 1.1+, Node 20+ for CI compatibility.
 
 ```sh
-npm ci --prefix web && npm run build --prefix web
+bun install --cwd web && bun run --cwd web build
 cargo run --release -p orbynode-daemon
 ```
 
@@ -38,7 +38,7 @@ breaking interface changes and the SBOM location.
 Build locally with:
 
 ```sh
-npm ci --prefix web && npm run build --prefix web
+bun install --cwd web && bun run --cwd web build
 cargo build --release -p orbynode-daemon
 ```
 

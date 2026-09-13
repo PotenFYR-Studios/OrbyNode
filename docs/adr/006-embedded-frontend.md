@@ -6,6 +6,9 @@
 
 ## Decision
 
+The web client is built with Vite, React, TypeScript, Bun, and Magic UI.
+Next.js and other React meta-frameworks are not used.
+
 The daemon binary embeds the built web UI. `crates/api/build.rs` walks
 `web/dist` at compile time and emits `include_bytes!` entries into `OUT_DIR`;
 the Axum fallback route serves them with an SPA fallback to `index.html`.

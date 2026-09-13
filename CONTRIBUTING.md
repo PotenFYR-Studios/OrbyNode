@@ -6,28 +6,28 @@ Thanks for helping build OrbyNode. Keep changes milestone-scoped (see
 
 ## Development setup
 
-Requirements: Rust 1.85+, Node 20+.
+Requirements: Rust 1.85+, Bun 1.1+, Node 20+ for CI compatibility.
 
 ```sh
-npm ci --prefix web          # frontend deps
+bun install --cwd web          # frontend deps
 cargo build                  # backend
 ```
 
 ## Workflow
 
-1. Build the web UI (`npm run build --prefix web`) so the daemon embeds real
+1. Build the web UI (`bun run --cwd web build`) so the daemon embeds real
    assets. Without it, the daemon still builds and serves a placeholder page.
 2. Run the daemon: `cargo run -p orbynode-daemon` (or with
    `ORBYNODE_STATIC_DIR=web/dist` to iterate on the UI without rebuilding Rust).
-3. Frontend dev server with proxy: `npm run dev --prefix web`.
+3. Frontend dev server with proxy: `bun run dev --cwd web`.
 
 ## Checks (all required before a PR)
 
 ```sh
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-npm run check --prefix web
-npm run build --prefix web
+bun run --cwd web check
+bun run --cwd web build
 ```
 
 ## Ground rules
@@ -41,3 +41,5 @@ npm run build --prefix web
 ## Commit messages
 
 Focus on the change. No AI attribution in commits or PRs.
+
+Use Vite + React + TypeScript + Bun + Magic UI. Do not use Next.js.

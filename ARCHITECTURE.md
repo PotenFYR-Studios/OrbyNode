@@ -56,7 +56,7 @@ Environment variables over secure defaults:
 ## Build and run
 
 ```sh
-npm ci --prefix web && npm run build --prefix web   # build web UI
+bun install --cwd web && bun run --cwd web build   # build web UI
 cargo run --release -p orbynode-daemon              # run daemon
 curl -s localhost:7676/health                       # verify
 ```
