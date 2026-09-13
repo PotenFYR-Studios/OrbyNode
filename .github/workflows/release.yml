@@ -78,11 +78,6 @@ jobs:
         run: |
           cargo metadata --locked --format-version 1 > /dev/null
           test -f web/bun.lock
-      - name: Verify locked build inputs
-        shell: bash
-        run: |
-          cargo metadata --locked --format-version 1 > /dev/null
-          test -f web/bun.lock
       - name: Cosign sign
         shell: bash
         run: |

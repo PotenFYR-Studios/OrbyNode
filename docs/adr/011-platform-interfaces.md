@@ -1,5 +1,7 @@
 # ADR 011 - Platform Interfaces
 
+> Superseded by [API Interface Stability](011-api-interface-stability.md).
+
 - Status: Accepted
 - Date: 2026-09-13
 - Context: Plan §140; Milestone 17

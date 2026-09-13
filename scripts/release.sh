@@ -9,8 +9,13 @@ if [ -z "$TARGET" ]; then
 fi
 
 cd "$(dirname "$0")/.."
-bun install --cwd web
-bun run --cwd web build
+if command -v bun >/dev/null 2>&1; then
+  (cd web && bun install)
+  (cd web && bun run build)
+else
+  npm ci --prefix web
+  npm run build --prefix web
+fi
 cargo build --release --locked -p orbynode-daemon --target "$TARGET"
 
 BINARY="orbynode-daemon"

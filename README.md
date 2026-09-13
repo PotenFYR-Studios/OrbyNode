@@ -125,6 +125,7 @@ See [docs/v1-readiness.md](docs/v1-readiness.md) for remaining clean-machine ins
 - [Getting started](docs/getting-started.md)
 - [Architecture](ARCHITECTURE.md)
 - [Operations](docs/operations.md)
+- [Website](docs/website/README.md)
 - [REST API](docs/rest-api.md)
 - [Realtime protocol](docs/realtime.md)
 - [Agents](docs/agents.md)

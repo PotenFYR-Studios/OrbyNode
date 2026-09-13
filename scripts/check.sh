@@ -13,9 +13,17 @@ echo "==> cargo test"
 cargo test --workspace
 
 echo "==> web typecheck"
-(cd web && bun run check)
+if command -v bun >/dev/null 2>&1; then
+  (cd web && bun run check)
+else
+  npm run check --prefix web
+fi
 
 echo "==> web build"
-(cd web && bun run build)
+if command -v bun >/dev/null 2>&1; then
+  (cd web && bun run build)
+else
+  npm run build --prefix web
+fi
 
 echo "All checks passed."

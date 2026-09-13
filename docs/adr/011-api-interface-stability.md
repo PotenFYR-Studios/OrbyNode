@@ -1,5 +1,8 @@
 # ADR 011 - API Interface Stability
 
+> Canonical ADR 011. `011-platform-interfaces.md` is retained as a historical
+> duplicate and points here.
+
 - Status: Accepted
 - Date: 2026-09-13
 - Context: Plan §140; Milestone 17

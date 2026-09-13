@@ -35,11 +35,12 @@ holds detail.
 The milestone engineering baseline is complete. Focus now shifts to v1.0
 release verification rather than new feature surface:
 
-1. Add the one-command installer bootstrap.
-2. Verify checksums, Cosign signatures and SBOMs in clean environments.
-3. Test install, upgrade, rollback and clean uninstall per target.
-4. Validate the Tauri desktop package separately.
-5. Complete end-to-end production performance captures.
+1. Run `scripts/install.sh` in clean Linux and macOS environments.
+2. Add Windows installer/PATH support.
+3. Enforce Cosign identity policy at install.
+4. Test install, upgrade, rollback and clean uninstall per target.
+5. Validate the Tauri desktop package separately.
+6. Complete end-to-end production performance captures.
 
 See [docs/v1-readiness.md](docs/v1-readiness.md).
 

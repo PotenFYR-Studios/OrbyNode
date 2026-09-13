@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OrbyNode - self-hosted control plane for coding agents</title>
+    <meta
+      name="description"
+      content="Run persistent terminal coding agents, inspect files, Git and tasks, and manage multi-machine work through one self-hosted daemon."
+    />
+    <meta name="color-scheme" content="dark" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070a12;
+        --card: rgba(255, 255, 255, 0.05);
+        --border: rgba(255, 255, 255, 0.1);
+        --text: #e6edf3;
+        --muted: #98a2b3;
+        --cyan: #22d3ee;
+        --violet: #8b5cf6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.25), transparent 34%),
+          radial-gradient(circle at 85% 18%, rgba(34, 211, 238, 0.2), transparent 32%),
+          var(--bg);
+      }
+      main {
+        width: min(1120px, calc(100% - 3rem));
+        margin: 0 auto;
+        padding: 4rem 0 6rem;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 7rem;
+      }
+      .brand { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.04em; }
+      .brand span { color: var(--cyan); }
+      nav { display: flex; gap: 1.5rem; align-items: center; }
+      a { color: inherit; text-decoration: none; }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.8rem 1.25rem;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.35);
+        background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(139, 92, 246, 0.16));
+        font-weight: 650;
+      }
+      .hero {
+        max-width: 900px;
+        margin-bottom: 5rem;
+      }
+      .eyebrow {
+        display: inline-block;
+        margin: 0 0 1rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        color: var(--cyan);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(2.6rem, 7vw, 5.3rem);
+        line-height: 1;
+        letter-spacing: -0.07em;
+      }
+      .gradient {
+        background: linear-gradient(90deg, var(--cyan), var(--violet));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .lede {
+        max-width: 680px;
+        margin: 1.5rem 0 2.2rem;
+        color: var(--muted);
+        font-size: 1.15rem;
+        line-height: 1.6;
+      }
+      .cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+      .secondary { border-color: var(--border); background: rgba(255,255,255,0.04); }
+      section { margin-top: 5rem; }
+      h2 { margin: 0 0 1.5rem; letter-spacing: -0.03em; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        min-height: 170px;
+        padding: 1.35rem;
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        background: var(--card);
+        backdrop-filter: blur(18px);
+      }
+      .card h3 { margin: 0 0 0.55rem; font-size: 1.05rem; }
+      .card p { margin: 0; color: var(--muted); line-height: 1.55; }
+      .steps { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; }
+      .code {
+        border: 1px solid var(--border);
+        background: #05070d;
+        border-radius: 1.25rem;
+        padding: 1.25rem;
+        overflow: auto;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        color: #c9d1d9;
+        line-height: 1.65;
+      }
+      footer {
+        margin-top: 7rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .card { transition: border-color 180ms ease, transform 180ms ease; }
+        .card:hover { border-color: rgba(34,211,238,0.45); transform: translateY(-3px); }
+      }
+      @media (max-width: 780px) {
+        .grid, .steps { grid-template-columns: 1fr; }
+        nav a:not(.button) { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">Orby<span>Node</span></div>
+        <nav>
+          <a href="https://github.com/PotenFYR-Studios/OrbyNode">GitHub</a>
+          <a href="#features">Features</a>
+          <a href="#quickstart">Quick start</a>
+          <a class="button" href="https://github.com/PotenFYR-Studios/OrbyNode">Get started</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <p class="eyebrow">Self-hosted · local-first · persistent agents</p>
+        <h1>The control plane for <span class="gradient">coding agents</span>.</h1>
+        <p class="lede">
+          OrbyNode owns real PTYs, durable workspaces, Git, tasks and remote nodes in one daemon.
+          Close the browser, switch networks, or reopen a desktop shell later. Your agents keep working.
+        </p>
+        <div class="cta">
+          <a class="button" href="#quickstart">Run it locally</a>
+          <a class="button secondary" href="https://github.com/PotenFYR-Studios/OrbyNode/blob/main/ARCHITECTURE.md">Read architecture</a>
+        </div>
+      </section>
+
+      <section id="features">
+        <h2>One control plane, not another terminal wrapper</h2>
+        <div class="grid">
+          <article class="card"><h3>Persistent PTYs</h3><p>Real terminals stay alive across disconnects and UI restarts.</p></article>
+          <article class="card"><h3>Realtime state</h3><p>Snapshots, sequences, replay and bounded queues with no polling.</p></article>
+          <article class="card"><h3>Agent awareness</h3><p>Detect working, waiting, approval and failure states across machines.</p></article>
+          <article class="card"><h3>Files and Git</h3><p>Inspect changes inside authorized project roots, safely.</p></article>
+          <article class="card"><h3>Tasks and worktrees</h3><p>Give each agent isolated work and review its merge path.</p></article>
+          <article class="card"><h3>Remote nodes</h3><p>Pair machines and aggregate agents without losing host boundaries.</p></article>
+        </div>
+      </section>
+
+      <section id="quickstart">
+        <h2>Run from source</h2>
+        <div class="steps">
+          <article class="card"><h3>1 · Install</h3><p>Rust 1.85+, Bun 1.1+ and a supported Rust target.</p></article>
+          <article class="card"><h3>2 · Build</h3><p>Vite + React + TypeScript + Bun builds the embedded client.</p></article>
+          <article class="card"><h3>3 · Launch</h3><p>The daemon listens on localhost by default.</p></article>
+        </div>
+        <pre class="code"><code>git clone https://github.com/PotenFYR-Studios/OrbyNode.git
+cd OrbyNode
+(cd web &amp;&amp; bun install &amp;&amp; bun run build)
+cargo run --release -p orbynode-daemon</code></pre>
+      </section>
+
+      <section>
+        <h2>What needs you now?</h2>
+        <div class="grid">
+          <article class="card"><h3>Attention Center</h3><p>Approvals, failures and blocked agents surface in one place.</p></article>
+          <article class="card"><h3>Multi-user RBAC</h3><p>Owners, admins, operators, developers and viewers per project.</p></article>
+          <article class="card"><h3>Observable runtime</h3><p>Host, process and workflow signals expose expensive or runaway work.</p></article>
+        </div>
+      </section>
+
+      <footer>
+        <span>© 2026 PotenFYR Studios</span>
+        <span>Apache-2.0 with Commons Clause</span>
+      </footer>
+    </main>
+  </body>
+</html>
