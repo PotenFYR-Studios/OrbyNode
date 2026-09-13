@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth", "crates/agents"]
+members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth", "crates/agents", "crates/integrations"]
 exclude = ["desktop/tauri"]
 
 [workspace.package]
@@ -12,6 +12,7 @@ license = "MIT"
 orbynode-core = { path = "crates/core" }
 orbynode-terminal = { path = "crates/terminal" }
 orbynode-agents = { path = "crates/agents" }
+orbynode-integrations = { path = "crates/integrations" }
 orbynode-auth = { path = "crates/auth" }
 orbynode-database = { path = "crates/database" }
 orbynode-realtime = { path = "crates/realtime" }

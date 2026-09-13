@@ -15,6 +15,7 @@ use tower_http::trace::TraceLayer;
 pub mod agent_routes;
 pub mod auth_routes;
 pub mod gateway;
+pub mod integration_routes;
 
 /// Small error wrapper shared by route modules (avoids `result_large_err`).
 #[derive(Debug)]
@@ -23,6 +24,13 @@ pub struct ApiError(pub StatusCode);
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> Response {
         self.0.into_response()
+    }
+}
+
+impl ApiError {
+    pub fn from_integration(e: orbynode_integrations::IntegrationError) -> Self {
+        tracing::error!(error = %e, "integration error");
+        ApiError(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 
@@ -159,6 +167,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(gateway::routes())
         .merge(project_routes::routes())
         .merge(agent_routes::routes())
+        .merge(integration_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,

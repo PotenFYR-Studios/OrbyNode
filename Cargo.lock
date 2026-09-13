@@ -974,6 +974,7 @@ dependencies = [
  "orbynode-auth",
  "orbynode-core",
  "orbynode-database",
+ "orbynode-integrations",
  "orbynode-realtime",
  "orbynode-terminal",
  "serde",
@@ -1022,6 +1023,16 @@ version = "0.0.1"
 dependencies = [
  "serde",
  "sqlx",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "orbynode-integrations"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]
