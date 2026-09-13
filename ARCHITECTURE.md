@@ -1,8 +1,8 @@
-# OrbyNode — Architecture
+# OrbyNode - Architecture
 
 > The self-hosted control plane for coding agents.
 
-OrbyNode is a daemon-centric system. One process — the **daemon** — is the
+OrbyNode is a daemon-centric system. One process - the **daemon** - is the
 authoritative runtime that owns PTYs, agents, and all persistent state.
 Browsers and the (future) desktop shell are clients. Closing a client never
 stops agents.
@@ -29,16 +29,16 @@ Browser / PWA ──HTTP──► OrbyNode daemon
 | `desktop/tauri`   | Tauri shell: tray + window. Client only (ADR 007).   |
 
 New subsystems (terminal, realtime, database, auth, …) become new crates when
-a milestone introduces them — see `Plan.md` §120 for the target layout.
+a milestone introduces them - see `Plan.md` §120 for the target layout.
 
 ## Key decisions
 
 Architecture decisions are recorded as ADRs in `docs/adr/`. The load-bearing
 ones so far:
 
-- **[ADR 001](docs/adr/001-daemon-architecture.md)** — daemon is the runtime; clients are replaceable.
-- **[ADR 003](docs/adr/003-api-transport.md)** — REST for commands, WebSocket for state; no polling.
-- **[ADR 006](docs/adr/006-embedded-frontend.md)** — web UI compiled into the binary; `ORBYNODE_STATIC_DIR` for dev.
+- **[ADR 001](docs/adr/001-daemon-architecture.md)** - daemon is the runtime; clients are replaceable.
+- **[ADR 003](docs/adr/003-api-transport.md)** - REST for commands, WebSocket for state; no polling.
+- **[ADR 006](docs/adr/006-embedded-frontend.md)** - web UI compiled into the binary; `ORBYNODE_STATIC_DIR` for dev.
 
 ## Configuration
 

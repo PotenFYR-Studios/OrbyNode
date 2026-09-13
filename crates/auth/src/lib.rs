@@ -1,4 +1,4 @@
-//! OrbyNode auth — Argon2id passwords, server-side sessions, throttling (ADR 005).
+//! OrbyNode auth - Argon2id passwords, server-side sessions, throttling (ADR 005).
 
 // ---------- Public API ----------
 
@@ -34,7 +34,7 @@ impl Role {
 
 #[derive(Debug)]
 pub enum AuthError {
-    /// Unknown user OR bad password — identical, no enumeration.
+    /// Unknown user OR bad password - identical, no enumeration.
     InvalidCredentials,
     /// Account temporarily locked by throttling.
     Locked,

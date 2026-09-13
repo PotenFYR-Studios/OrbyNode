@@ -1,4 +1,4 @@
-# ADR 007 — Desktop / Daemon Separation
+# ADR 007 - Desktop / Daemon Separation
 
 - Status: Accepted
 - Date: 2026-09-13 (Milestone 5)

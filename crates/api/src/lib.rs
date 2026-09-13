@@ -20,6 +20,7 @@ pub mod gateway;
 pub mod integration_routes;
 pub mod node_routes;
 pub mod notification_routes;
+pub mod platform_routes;
 
 /// Small error wrapper shared by route modules (avoids `result_large_err`).
 #[derive(Debug)]
@@ -263,6 +264,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(attention_routes::routes())
         .merge(node_routes::routes())
         .merge(notification_routes::routes())
+        .merge(platform_routes::routes())
         .merge(integration_routes::routes())
         .merge(file_routes::routes())
         .merge(rbac_routes::routes())

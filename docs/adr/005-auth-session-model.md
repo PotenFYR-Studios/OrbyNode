@@ -1,4 +1,4 @@
-# ADR 005 — Authentication / Session Model
+# ADR 005 - Authentication / Session Model
 
 - Status: Accepted
 - Date: 2026-09-13 (Milestone 4)
@@ -20,7 +20,7 @@
   revocation).
 - **Throttling:** failed logins per username track in memory; after 5 failures
   within 15 minutes, the account is locked for 5 minutes (server-side, no
-  user enumeration — same error for unknown user and bad password).
+  user enumeration - same error for unknown user and bad password).
 - **CSRF:** session cookie is SameSite=Lax and all state-changing requests
   require the `X-Orbynode-CSRF` header to match the per-session token issued
   at login. WebSocket `sub` messages are authorized by the session bound at

@@ -1,8 +1,8 @@
-# ADR 009 — Realtime Protocol
+# ADR 009 - Realtime Protocol
 
 - Status: Accepted
 - Date: 2026-09-13 (Milestone 2)
-- Context: Plan §56–§71, §88–§92, §115; Milestone 2 (§125)
+- Context: Plan §56-§71, §88-§92, §115; Milestone 2 (§125)
 
 ## Decision
 
@@ -29,10 +29,10 @@ by topic (Plan §57). No polling anywhere.
 
 1. Client connects to `/ws`, sends `{"op":"hello","last_seq":N}` (or
    `{"op":"hello"}` for a fresh session).
-2. Server replies `{"op":"snapshot","seq":S,"state":{...}}` — current durable
+2. Server replies `{"op":"snapshot","seq":S,"state":{...}}` - current durable
    state for the client's authorized scope. If `last_seq` is inside the
    replay ring, server instead replies `{"op":"resume","from":N+1}` followed
-   by missed events — no full resnapshot on short interruptions (§62).
+   by missed events - no full resnapshot on short interruptions (§62).
 3. If `last_seq` is gone (ring wrapped): `{"op":"resync_required"}`, client
    re-snapshots (§62).
 4. Client subscribes: `{"op":"sub","stream":"terminal:1"}`; unsubscribes with
@@ -51,7 +51,7 @@ by topic (Plan §57). No polling anywhere.
   `{"op":"stream_overflow","stream":...}` and must resubscribe (replaying
   scrollback). Critical streams (attention, approvals) are never dropped.
 - Coalescing (§64): high-frequency replaceable state (metrics, context
-  meters) is coalesced per stream — only the newest value is kept when the
+  meters) is coalesced per stream - only the newest value is kept when the
   queue backs up. Semantically significant events are never coalesced.
 
 ### Authorization (§60, §105)
@@ -65,7 +65,7 @@ live revocation path is completed in M11).
 ### Terminal transport (§65)
 
 Terminal bytes ride the multiplexed socket as binary frames prefixed with the
-stream id: `[stream_id_varint][bytes]` — one PTY read still fans out to all
+stream id: `[stream_id_varint][bytes]` - one PTY read still fans out to all
 subscribed clients (§59); the bus copies to each subscriber's queue.
 
 ### In-process bus

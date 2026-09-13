@@ -11,7 +11,7 @@ any suggested mitigation. You can expect an initial response within a few days.
 
 ## Security model (short version)
 
-OrbyNode grants terminal access — treat any account with terminal write as
+OrbyNode grants terminal access - treat any account with terminal write as
 remote-code-execution capability on the host. Design rules that follow from
 that (full list: `Plan.md` §16, non-negotiables §151):
 

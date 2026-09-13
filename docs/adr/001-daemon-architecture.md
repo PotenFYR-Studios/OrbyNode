@@ -1,4 +1,4 @@
-# ADR 001 — Daemon Architecture
+# ADR 001 - Daemon Architecture
 
 - Status: Accepted
 - Date: 2026-09-13
@@ -6,7 +6,7 @@
 
 ## Decision
 
-OrbyNode is a single primary daemon process (`orbynode`) — the authoritative
+OrbyNode is a single primary daemon process (`orbynode`) - the authoritative
 runtime. Browsers and the later desktop shell are clients of the daemon; none
 of them host agent processes. Closing any client never terminates agents.
 

@@ -1,4 +1,4 @@
-//! OrbyNode files — project-root-enforced file access (Plan §23).
+//! OrbyNode files - project-root-enforced file access (Plan §23).
 //!
 //! Security invariants (§23, §16): every path is canonicalized and must stay
 //! inside the authorized project root; symlinks that escape the root are
@@ -54,7 +54,7 @@ impl Workspace {
     /// Canonicalize `rel` under the root, rejecting traversal and symlink
     /// escapes. Fail-closed: any canonicalization error is OutsideRoot/NotFound.
     fn resolve(&self, rel: &str) -> Result<std::path::PathBuf, FilesError> {
-        // Reads/deletes: reject dot-dot outright — containment of a
+        // Reads/deletes: reject dot-dot outright - containment of a
         // non-existent traversal target is unknowable, so fail closed.
         if rel.split('/').any(|seg| seg == "..") {
             return Err(FilesError::OutsideRoot);

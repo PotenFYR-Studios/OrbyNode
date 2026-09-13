@@ -7,6 +7,7 @@ use axum::{Json, Router};
 use orbynode_database::{Conflict, Task, TaskState};
 use orbynode_files::git::GitRepo;
 use orbynode_files::worktree::{WorktreeManager, default_base};
+use orbynode_realtime::{Event, Stream};
 
 use crate::{ApiError, AppState};
 
@@ -99,6 +100,16 @@ async fn delete_task(
     Path(id): Path<i64>,
 ) -> Result<StatusCode, ApiError> {
     state.db.delete_task(id).await.map_err(ApiError::from)?;
+    state
+        .attention
+        .observe(&Event {
+            stream: Stream::new("tasks"),
+            etype: "task.deleted".into(),
+            data: serde_json::json!({ "id": id }),
+            priority: orbynode_realtime::Priority::Critical,
+            bytes: Vec::new(),
+        })
+        .await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -115,7 +126,19 @@ async fn move_task(
     Json(body): Json<MoveBody>,
 ) -> Result<Json<Task>, ApiError> {
     match state.db.move_task(id, body.state, body.version).await {
-        Ok(Ok(task)) => Ok(Json(task)),
+        Ok(Ok(task)) => {
+            state
+                .attention
+                .observe(&Event {
+                    stream: Stream::new(format!("tasks:project{}", task.project_id)),
+                    etype: "task.updated".into(),
+                    data: serde_json::to_value(&task).unwrap_or_default(),
+                    priority: orbynode_realtime::Priority::Critical,
+                    bytes: Vec::new(),
+                })
+                .await;
+            Ok(Json(task))
+        }
         Ok(Err(Conflict)) => Err(ApiError(StatusCode::CONFLICT)),
         Err(e) => Err(ApiError::from(e)),
     }

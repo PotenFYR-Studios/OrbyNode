@@ -1,4 +1,4 @@
-//! OrbyNode git — CLI-based Git integration (Plan §6: "CLI-based Git
+//! OrbyNode git - CLI-based Git integration (Plan §6: "CLI-based Git
 //! integration initially"). One git invocation per operation; the project
 //! watcher (M10+) fans status out (§83).
 

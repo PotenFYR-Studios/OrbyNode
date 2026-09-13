@@ -1,4 +1,4 @@
-# ADR 006 — Embedded Frontend Delivery
+# ADR 006 - Embedded Frontend Delivery
 
 - Status: Accepted
 - Date: 2026-09-13
@@ -12,7 +12,7 @@ the Axum fallback route serves them with an SPA fallback to `index.html`.
 
 - If `web/dist` is missing, a placeholder page is embedded so the workspace
   always builds from a fresh clone.
-- `ORBYNODE_STATIC_DIR=/path/to/web/dist` serves from disk instead — used in
+- `ORBYNODE_STATIC_DIR=/path/to/web/dist` serves from disk instead - used in
   frontend development so rebuilds don't require a cargo rebuild.
 - Path traversal is rejected fail-closed: any `%` encoding or `..` segment in
   the request path is a 404 (Plan §16).

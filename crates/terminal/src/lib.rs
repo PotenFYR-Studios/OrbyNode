@@ -1,4 +1,4 @@
-//! OrbyNode terminal runtime — real PTYs, captured once, fanned out (ADR 002).
+//! OrbyNode terminal runtime - real PTYs, captured once, fanned out (ADR 002).
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -115,7 +115,7 @@ impl Terminal {
         self.id
     }
 
-    /// Subscribe to raw PTY output (captured once, fanned out — Plan §59).
+    /// Subscribe to raw PTY output (captured once, fanned out - Plan §59).
     pub fn subscribe(&self) -> broadcast::Receiver<Vec<u8>> {
         self.inner.tx.subscribe()
     }

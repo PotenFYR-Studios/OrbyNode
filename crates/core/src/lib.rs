@@ -1,4 +1,4 @@
-//! OrbyNode core — shared types: version, config, paths.
+//! OrbyNode core - shared types: version, config, paths.
 //!
 //! Kept intentionally small. Do not let this become a dumping ground (Plan §120).
 
@@ -73,7 +73,7 @@ pub fn db_url(data_dir: &std::path::Path) -> String {
     )
 }
 
-/// `~/.orbynode` — falls back to a local dir when HOME is unknown (rare).
+/// `~/.orbynode` - falls back to a local dir when HOME is unknown (rare).
 pub fn default_data_dir() -> PathBuf {
     home_dir()
         .map(|h| h.join(".orbynode"))

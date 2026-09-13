@@ -1,4 +1,4 @@
-//! OrbyNode persistence — SQLite, WAL, durable state only (ADR 004).
+//! OrbyNode persistence - SQLite, WAL, durable state only (ADR 004).
 
 // ---------- Public API ----------
 
@@ -288,6 +288,109 @@ const MIGRATIONS: &[(i64, &str)] = &[
         );
 
         CREATE INDEX idx_auth_sessions_expiry ON auth_sessions (expires_at);
+        "#,
+    ),
+    (
+        5,
+        r#"
+        CREATE TABLE nodes (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            fingerprint TEXT NOT NULL UNIQUE,
+            public_key TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            secret_hash TEXT,
+            last_seen_at INTEGER,
+            created_at INTEGER NOT NULL,
+            paired_at INTEGER
+        );
+
+        CREATE TABLE pairing_codes (
+            code_hash TEXT PRIMARY KEY,
+            node_id TEXT UNIQUE REFERENCES nodes(id) ON DELETE CASCADE,
+            expires_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+        "#,
+    ),
+    (
+        6,
+        r#"
+        CREATE TABLE workflow_definitions (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            config TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE workflow_runs (
+            id TEXT PRIMARY KEY,
+            definition_id TEXT NOT NULL REFERENCES workflow_definitions(id) ON DELETE CASCADE,
+            status TEXT NOT NULL DEFAULT 'running',
+            current_stage TEXT NOT NULL,
+            variables TEXT NOT NULL DEFAULT '{}',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE workflow_steps (
+            id TEXT PRIMARY KEY,
+            run_id TEXT NOT NULL REFERENCES workflow_runs(id) ON DELETE CASCADE,
+            stage TEXT NOT NULL,
+            agent TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            output TEXT NOT NULL DEFAULT '',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_workflow_steps_run ON workflow_steps (run_id, stage);
+        "#,
+    ),
+    (
+        7,
+        r#"
+        CREATE TABLE api_tokens (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            scopes TEXT NOT NULL DEFAULT '[]',
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER,
+            revoked_at INTEGER
+        );
+
+        CREATE INDEX idx_api_tokens_hash ON api_tokens (token_hash);
+
+        CREATE TABLE webhooks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            url TEXT NOT NULL,
+            secret TEXT NOT NULL,
+            events TEXT NOT NULL DEFAULT '[]',
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE mcp_tools (
+            name TEXT PRIMARY KEY,
+            description TEXT NOT NULL,
+            schema TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE plugins (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            manifest TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
         "#,
     ),
 ];
@@ -610,11 +713,10 @@ impl Db {
     }
 
     pub async fn list_users(&self) -> DbResult<Vec<serde_json::Value>> {
-        let rows: Vec<(i64, String, String, String)> = sqlx::query_as(
-            "SELECT id, username, display_name, role FROM users ORDER BY id",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows: Vec<(i64, String, String, String)> =
+            sqlx::query_as("SELECT id, username, display_name, role FROM users ORDER BY id")
+                .fetch_all(&self.pool)
+                .await?;
         Ok(rows
             .into_iter()
             .map(|(id, username, display_name, role)| {

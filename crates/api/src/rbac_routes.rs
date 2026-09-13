@@ -27,7 +27,10 @@ fn require(user: &User, perm: Perm) -> Result<(), ApiError> {
     }
 }
 
-async fn list_users(State(state): State<AppState>, Extension(user): Extension<User>) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
+async fn list_users(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
     require(&user, Perm::UsersManage)?;
     Ok(Json(state.db.list_users().await.map_err(ApiError::from)?))
 }
@@ -48,11 +51,21 @@ async fn create_user(
     require(&actor, Perm::UsersManage)?;
     let u = state
         .auth
-        .create_user(&body.username, &body.display_name, &body.password, body.role)
+        .create_user(
+            &body.username,
+            &body.display_name,
+            &body.password,
+            body.role,
+        )
         .await
         .map_err(ApiError::from)?;
     state
-        .record(Some(&actor), "user.create", &format!("user:{}", u.username), body.role.as_str())
+        .record(
+            Some(&actor),
+            "user.create",
+            &format!("user:{}", u.username),
+            body.role.as_str(),
+        )
         .await;
     Ok((
         StatusCode::CREATED,
@@ -70,7 +83,13 @@ async fn list_members(
     Path(project_id): Path<i64>,
 ) -> Result<Json<Vec<serde_json::Value>>, ApiError> {
     require(&user, Perm::ProjectView)?;
-    Ok(Json(state.db.list_members(project_id).await.map_err(ApiError::from)?))
+    Ok(Json(
+        state
+            .db
+            .list_members(project_id)
+            .await
+            .map_err(ApiError::from)?,
+    ))
 }
 
 #[derive(serde::Deserialize)]
@@ -92,7 +111,12 @@ async fn set_member(
         .await
         .map_err(ApiError::from)?;
     state
-        .record(Some(&actor), "member.set", &format!("project:{project_id}/user:{}", body.user_id), &body.role)
+        .record(
+            Some(&actor),
+            "member.set",
+            &format!("project:{project_id}/user:{}", body.user_id),
+            &body.role,
+        )
         .await;
     // Live revocation (Plan §105): permission change republishes the ACL so
     // the gateway drops now-forbidden subscriptions on next check.
@@ -118,7 +142,12 @@ async fn remove_member(
         .await
         .map_err(ApiError::from)?;
     state
-        .record(Some(&actor), "member.remove", &format!("project:{project_id}/user:{member_user_id}"), "")
+        .record(
+            Some(&actor),
+            "member.remove",
+            &format!("project:{project_id}/user:{member_user_id}"),
+            "",
+        )
         .await;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -139,5 +168,7 @@ async fn audit_tail(
     Query(q): Query<AuditQuery>,
 ) -> Result<Json<Vec<orbynode_database::AuditEntry>>, ApiError> {
     require(&user, Perm::AuditView)?;
-    Ok(Json(state.db.audit_tail(q.limit).await.map_err(ApiError::from)?))
+    Ok(Json(
+        state.db.audit_tail(q.limit).await.map_err(ApiError::from)?,
+    ))
 }

@@ -142,6 +142,7 @@ impl From<orbynode_workflows::WorkflowError> for ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::build_router;
     use axum::body::Body;
     use axum::http::{Request, header};
     use orbynode_auth::SessionInfo;
@@ -155,21 +156,48 @@ mod tests {
                 Request::post("/setup")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
-                        r#"{"username":"owner","display_name":"Owner","password":"good-pass-1"}"#,
+                        r#"{"username":"workflow-owner","display_name":"Workflow Owner","password":"good-pass-workflow"}"#,
                     ))
                     .unwrap(),
             )
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::CREATED);
+        let status = response.status();
+        if status != StatusCode::CREATED {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/login")
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(
+                            r#"{"username":"workflow-owner","password":"good-pass-workflow"}"#,
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let status = response.status();
+            assert_eq!(status, StatusCode::OK, "unexpected login status");
+            let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+            let session = SessionInfo {
+                token: value["token"].as_str().unwrap().to_owned(),
+                user_id: value["user_id"].as_i64().unwrap(),
+                csrf: value["csrf"].as_str().unwrap().to_owned(),
+                expires_at: value["expires_at"].as_i64().unwrap(),
+            };
+            return (app, session);
+        }
         let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap();
         let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
         let session = SessionInfo {
-            token: value["token"].as_str().unwrap().to_string(),
+            token: value["token"].as_str().unwrap().to_owned(),
             user_id: value["user_id"].as_i64().unwrap(),
-            csrf: value["csrf"].as_str().unwrap().to_string(),
+            csrf: value["csrf"].as_str().unwrap().to_owned(),
             expires_at: value["expires_at"].as_i64().unwrap(),
         };
         (app, session)
@@ -194,7 +222,18 @@ mod tests {
 
     #[tokio::test]
     async fn workflow_lifecycle_is_exposed() {
-        let (app, session) = authenticated(crate::build_router(crate::AppState::default())).await;
+        let state = AppState {
+            db: orbynode_database::Db::open("sqlite::memory:")
+                .await
+                .unwrap(),
+            ..AppState::default()
+        };
+        state
+            .auth
+            .setup_owner("workflow-owner", "Workflow Owner", "good-pass-workflow")
+            .await
+            .unwrap();
+        let (app, session) = authenticated(build_router(state)).await;
         let definition = serde_json::json!({
             "name": "delivery",
             "steps": [

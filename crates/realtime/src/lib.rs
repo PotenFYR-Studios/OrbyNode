@@ -1,4 +1,4 @@
-//! OrbyNode realtime core — event bus, multiplexed gateway (ADR 009).
+//! OrbyNode realtime core - event bus, multiplexed gateway (ADR 009).
 
 // ---------- Public API (implemented below) ----------
 
@@ -25,9 +25,9 @@ impl std::fmt::Display for Stream {
 /// on slow clients; droppable ones are replaceable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Priority {
-    /// Attention/approvals/security — never dropped (P0–P2).
+    /// Attention/approvals/security - never dropped (P0-P2).
     Critical,
-    /// Terminal bytes, metrics — replaceable, may be dropped with resync (P3+).
+    /// Terminal bytes, metrics - replaceable, may be dropped with resync (P3+).
     Droppable,
 }
 
@@ -69,7 +69,7 @@ pub fn allow_all_authz() -> AuthzFn {
 
 // ---------- EventBus ----------
 
-/// Replay-ring sizing (in-memory only — Plan §74: transient state never hits
+/// Replay-ring sizing (in-memory only - Plan §74: transient state never hits
 /// the database).
 #[derive(Debug, Clone, Copy)]
 pub struct ReplayConfig {
@@ -160,7 +160,7 @@ impl EventBus {
     }
 
     /// Replay events for `stream` after `after_seq`. `None` when history is
-    /// gone (ring wrapped past that point) — client must resnapshot (§62).
+    /// gone (ring wrapped past that point) - client must resnapshot (§62).
     pub fn replay_from(&self, stream: &Stream, after_seq: u64) -> Option<Vec<Sequenced>> {
         let map = self.inner.streams.lock().expect("bus streams poisoned");
         let state = map.get(stream)?;

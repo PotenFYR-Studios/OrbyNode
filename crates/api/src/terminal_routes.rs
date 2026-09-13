@@ -2,7 +2,7 @@
 //!
 //! M1 transport: REST for create/list/resize/terminate, one WebSocket per
 //! terminal for the stream (binary out, text JSON in). M2 replaces this with
-//! the multiplexed gateway (ADR 009). Auth arrives with M4 — localhost-only
+//! the multiplexed gateway (ADR 009). Auth arrives with M4 - localhost-only
 //! binding is the containment until then (ADR 001).
 
 use std::sync::Arc;

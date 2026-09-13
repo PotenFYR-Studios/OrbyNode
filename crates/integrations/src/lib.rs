@@ -1,4 +1,4 @@
-//! OrbyNode integrations — safe install/update/rollback of agent hook
+//! OrbyNode integrations - safe install/update/rollback of agent hook
 //! configuration (Plan §12): idempotent, backups, preview, no silent
 //! overwrite of unknown user config.
 
@@ -55,7 +55,7 @@ impl std::fmt::Display for IntegrationError {
 
 impl std::error::Error for IntegrationError {}
 
-/// Filesystem root (user home) — injected for testability.
+/// Filesystem root (user home) - injected for testability.
 pub trait ConfigStore: Send + Sync {
     fn read(&self, rel: &str) -> std::io::Result<Option<String>>;
     fn write(&self, rel: &str, contents: &str) -> std::io::Result<()>;
@@ -215,7 +215,7 @@ impl<S: ConfigStore + 'static> IntegrationManager<S> {
             }
         };
         if root.get(HOOK_KEY).is_some() {
-            return Ok(()); // already installed — idempotent no-op
+            return Ok(()); // already installed - idempotent no-op
         }
         root.insert(
             HOOK_KEY.to_owned(),

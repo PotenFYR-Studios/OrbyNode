@@ -8,7 +8,8 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use orbynode_services::{
-    HostSnapshot, ListeningPort, ServiceRegistry, ServiceSpec, discover_ports, host_snapshot,
+    HostSnapshot, ListeningPort, ServiceRegistry, ServiceSpec, TerminalSnapshot, discover_ports,
+    host_snapshot, terminal_snapshots,
 };
 
 use crate::{ApiError, AppState};
@@ -17,6 +18,8 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/services/ports", get(ports))
         .route("/services/host", get(host))
+        .route("/observability/host", get(host))
+        .route("/observability/sessions", get(sessions))
         .route("/services", get(list_services).post(register_service))
         .route("/services/{name}", axum::routing::delete(remove_service))
         .route("/preview/{port}/{*path}", get(preview))
@@ -49,6 +52,20 @@ async fn host(State(state): State<AppState>) -> Result<Json<HostSnapshot>, ApiEr
         bytes: Vec::new(),
     });
     Ok(Json(snap))
+}
+
+async fn sessions(State(state): State<AppState>) -> Json<Vec<TerminalSnapshot>> {
+    let mut ids: Vec<u64> = state.terminals.list().iter().map(|t| t.id).collect();
+    ids.sort_unstable();
+    let snapshots = terminal_snapshots(&ids).await;
+    state.realtime.publish(orbynode_realtime::Event {
+        stream: orbynode_realtime::Stream::new("host"),
+        etype: "sessions.metrics".into(),
+        data: serde_json::to_value(&snapshots).unwrap_or_default(),
+        priority: orbynode_realtime::Priority::Droppable,
+        bytes: Vec::new(),
+    });
+    Json(snapshots)
 }
 
 async fn list_services(State(state): State<AppState>) -> Json<Vec<ServiceSpec>> {

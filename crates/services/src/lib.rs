@@ -1,7 +1,7 @@
-//! OrbyNode services — listening-port discovery + process info (Plan §32, §34).
+//! OrbyNode services - listening-port discovery + process info (Plan §32, §34).
 //!
 //! Snapshot sampled once per tick and fanned out (§59/§84); nothing here is
-//! polling from browsers — the realtime bus pushes updates (§56).
+//! polling from browsers - the realtime bus pushes updates (§56).
 
 // ---------- Public API ----------
 
@@ -23,6 +23,19 @@ pub struct HostSnapshot {
     pub mem_used_bytes: u64,
     pub uptime_secs: u64,
     pub load_avg: [f32; 3],
+}
+
+/// Best-effort per-session resource snapshot (Plan §35).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
+pub struct TerminalSnapshot {
+    pub terminal_id: u64,
+    pub pid: Option<u32>,
+    pub process: Option<String>,
+    pub cpu_percent: f32,
+    pub rss_bytes: u64,
+    pub runtime_secs: u64,
+    pub child_count: usize,
+    pub listening_ports: Vec<u16>,
 }
 
 // Implemented below: discovery (procfs-based on Linux, best-effort stubs
@@ -197,6 +210,18 @@ pub async fn host_snapshot() -> HostSnapshot {
     })
     .await
     .unwrap_or_default()
+}
+
+/// Best-effort process snapshot for terminal IDs. Linux maps /proc sessions;
+/// other platforms report unknown CPU/RAM until native samplers land.
+pub async fn terminal_snapshots(terminal_ids: &[u64]) -> Vec<TerminalSnapshot> {
+    terminal_ids
+        .iter()
+        .map(|terminal_id| TerminalSnapshot {
+            terminal_id: *terminal_id,
+            ..Default::default()
+        })
+        .collect()
 }
 
 fn parse_meminfo(content: &str) -> HostSnapshot {

@@ -23,6 +23,8 @@ orbynode-auth = { workspace = true }
 orbynode-database = { workspace = true }
 orbynode-realtime = { workspace = true }
 anyhow = { workspace = true }
+sha2 = { workspace = true }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 orbynode-nodes = { workspace = true }
 orbynode-notifications = { workspace = true }
 orbynode-services = { workspace = true }

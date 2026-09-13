@@ -1,5 +1,7 @@
-//! OrbyNode agent detection — process + terminal-output analysis (Plan §10,
-//! integration Levels 1–2; native hooks are M7).
+//! OrbyNode agent detection - process + terminal-output analysis (Plan §10,
+//! integration Levels 1-2; native hooks are M7).
+
+pub mod attention;
 
 // ---------- Public API ----------
 
@@ -101,28 +103,28 @@ impl AgentDetector {
 
     /// Feed one terminal-output event. Detection = identity banner match
     /// (stable per-agent patterns), state = latest matching rule.
-    pub async fn observe(&self, event: &orbynode_realtime::Event) {
+    pub async fn observe(
+        &self,
+        event: &orbynode_realtime::Event,
+    ) -> Option<orbynode_realtime::Event> {
         if event.etype != "terminal.output" {
-            return;
+            return None;
         }
         let Ok(text) = std::str::from_utf8(&event.bytes) else {
-            return;
+            return None;
         };
-        let Some(terminal_id) = event
+        let terminal_id = event
             .stream
             .as_str()
             .strip_prefix("terminal:")
-            .and_then(|id| id.parse::<u64>().ok())
-        else {
-            return;
-        };
+            .and_then(|id| id.parse::<u64>().ok())?;
 
         let mut agents = self.agents.lock().await;
         let tracked = match agents.get_mut(&terminal_id) {
             Some(t) => t,
             None => {
                 let Some(kind) = detect_identity(text) else {
-                    return; // not an agent terminal
+                    return None; // not an agent terminal
                 };
                 let t = TrackedAgent {
                     kind,
@@ -144,11 +146,11 @@ impl AgentDetector {
         }
         // Publish existence/state on the agents stream (§58).
         let _ = &self.bus; // bus publish below keeps the API uniform
-        self.publish(terminal_id, tracked);
+        Some(self.publish(terminal_id, tracked))
     }
 
-    fn publish(&self, terminal_id: u64, tracked: &TrackedAgent) {
-        self.bus.publish(orbynode_realtime::Event {
+    fn publish(&self, terminal_id: u64, tracked: &TrackedAgent) -> orbynode_realtime::Event {
+        let event = orbynode_realtime::Event {
             stream: orbynode_realtime::Stream::new("agents"),
             etype: "agent.detected".into(),
             data: serde_json::json!({
@@ -158,10 +160,12 @@ impl AgentDetector {
             }),
             priority: orbynode_realtime::Priority::Critical,
             bytes: Vec::new(),
-        });
+        };
+        self.bus.publish(event.clone());
+        event
     }
 
-    /// Terminal exited: mark the agent Disconnected (§10; not Deleted — the
+    /// Terminal exited: mark the agent Disconnected (§10; not Deleted - the
     /// session may be resumable later, M7).
     pub async fn mark_exited(&self, terminal_id: u64) {
         let mut agents = self.agents.lock().await;
@@ -267,7 +271,7 @@ mod tests {
         let bus = EventBus::new(ReplayConfig::default());
         let detector = AgentDetector::new(bus.clone());
         detector
-            .observe(&out_event(1, "OpenAI Codex v0.1 — starting"))
+            .observe(&out_event(1, "OpenAI Codex v0.1 - starting"))
             .await;
         detector
             .observe(&out_event(2, "gemini-cli> type your prompt"))
