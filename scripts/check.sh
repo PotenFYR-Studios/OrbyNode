@@ -13,9 +13,9 @@ echo "==> cargo test"
 cargo test --workspace
 
 echo "==> web typecheck"
-npm run check --prefix web
+bun run --cwd web check
 
 echo "==> web build"
-npm run build --prefix web
+bun run --cwd web build
 
 echo "All checks passed."

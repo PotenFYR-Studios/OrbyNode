@@ -26,7 +26,7 @@ This file tracks status; the plan holds the detail.
 | 16 | Workflows                  | ✅ Done          |
 | 17 | API, MCP, Plugin Foundation| ✅ Done          |
 | 18 | Scale Validation           | ✅ Done          |
-| 19 | Security Hardening         | Not started |
+| 19 | Security Hardening         | ✅ Done          |
 | 20 | Release Engineering        | ✅ Done          |
 
 ## Definition of done
