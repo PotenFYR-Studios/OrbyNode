@@ -1,65 +1,112 @@
-# OrbyNode - Architecture
+# OrbyNode Architecture
 
-> The self-hosted control plane for coding agents.
+OrbyNode is a self-hosted control plane for coding agents. One primary daemon
+owns terminals, agents, durable state, authorization, realtime fan-out and
+remote-node aggregation. Browser and desktop clients are replaceable views.
 
-OrbyNode is a daemon-centric system. One process - the **daemon** - is the
-authoritative runtime that owns PTYs, agents, and all persistent state.
-Browsers and the (future) desktop shell are clients. Closing a client never
-stops agents.
+## Core principles
+
+- **Daemon is the runtime.** Closing clients never terminates agents.
+- **Real PTYs.** Terminal bytes are captured once and fanned out.
+- **Realtime, not polling.** WebSocket snapshots and event replay drive state.
+- **Bounded resources.** Queues and replay rings have explicit caps.
+- **Durable state in SQLite.** Transient high-frequency state stays in memory.
+- **Secure by default.** Localhost binding, authentication and server-side RBAC.
+- **Cross-platform.** Rust daemon, static Vite client, optional Tauri shell.
+
+## Components
+
+| Component | Responsibility |
+| --- | --- |
+| `orbynode-core` | Version, configuration, data paths. Intentionally small. |
+| `orbynode-terminal` | PTY creation, resize/input/output, capture and termination. |
+| `orbynode-realtime` | Stream event bus, sequences, replay rings, subscriptions. |
+| `orbynode-database` | SQLite WAL, migrations, projects, sessions, tasks and audit. |
+| `orbynode-auth` | Argon2id, sessions, throttling, roles and permissions. |
+| `orbynode-agents` | Output/process detection and Attention Center. |
+| `orbynode-files` | Root-contained files, Git operations and worktrees. |
+| `orbynode-services` | Port discovery, service registry and process snapshots. |
+| `orbynode-nodes` | Remote-node identity, pairing, heartbeat and revocation. |
+| `orbynode-notifications` | Browser realtime events and generic webhook delivery. |
+| `orbynode-workflows` | Sequential, parallel and approval workflow stages. |
+| `orbynode-api` | Axum REST, middleware, gateway, previews and embedded UI. |
+| `orbynode-daemon` | Configuration, tracing, binding and graceful lifecycle. |
+
+## Request and realtime flow
 
 ```text
-Browser / PWA ──HTTP──► OrbyNode daemon
-                          ├── REST API (commands, CRUD)
-                          ├── embedded web UI
-                          └── realtime (M2+): one WebSocket per tab,
-                              snapshot + incremental events
+Browser / Tauri
+    |
+    | authenticated REST mutation
+    v
+Axum middleware --> role/project authorization --> SQLite / PTY / service
+    |
+    | domain event
+    v
+Realtime event bus --> sequence + bounded replay
+    |
+    | authenticated subscriptions
+    v
+Authorized clients receive snapshots, replay and live events
 ```
 
-## Crates
+Terminal PTY output is published once. Slow clients receive bounded queues and
+explicit overflow or resync signals; critical attention events are not dropped
+in favor of droppable terminal or metric traffic.
 
-| Crate             | Role                                                |
-| ----------------- | --------------------------------------------------- |
-| `crates/core`     | Shared types: version, config, paths. Deliberately small. |
-| `crates/api`      | Axum router, REST endpoints, embedded web UI, realtime gateway, auth middleware. |
-| `crates/daemon`   | `orbynode` binary: config, tracing, server loop.     |
-| `crates/terminal` | Real PTY runtime: capture once, fan out, bounded scrollback. |
-| `crates/realtime` | Event bus + client sessions: sequences, replay, priorities. |
-| `crates/database` | SQLite persistence: projects, sessions, settings.    |
-| `crates/auth`     | Argon2id passwords, sessions, throttling.            |
-| `desktop/tauri`   | Tauri shell: tray + window. Client only (ADR 007).   |
+## Persistence
 
-New subsystems (terminal, realtime, database, auth, …) become new crates when
-a milestone introduces them - see `Plan.md` §120 for the target layout.
+SQLite uses WAL and foreign keys. Durable repositories cover:
 
-## Key decisions
+- projects, sessions and terminal layouts,
+- users, sessions, memberships and audit logs,
+- tasks and worktree metadata,
+- remote-node identity and pairing state,
+- workflow definitions, runs and steps,
+- settings, API tokens, webhooks, MCP and plugin manifests.
 
-Architecture decisions are recorded as ADRs in `docs/adr/`. The load-bearing
-ones so far:
+Terminal bytes, live metrics and event replay remain transient and bounded.
 
-- **[ADR 001](docs/adr/001-daemon-architecture.md)** - daemon is the runtime; clients are replaceable.
-- **[ADR 003](docs/adr/003-api-transport.md)** - REST for commands, WebSocket for state; no polling.
-- **[ADR 006](docs/adr/006-embedded-frontend.md)** - web UI compiled into the binary; `ORBYNODE_STATIC_DIR` for dev.
+## Web and desktop
+
+The web client uses **Vite + React + TypeScript + Bun + Magic UI** and is
+built to static assets. Production assets are embedded in the daemon; disk
+mode supports frontend development. Next.js is not used.
+
+The optional Tauri desktop shell is separate from the daemon workspace. It
+reuses the daemon's local HTTP and WebSocket surface and must never become the
+agent runtime.
+
+## Security boundaries
+
+- Browser users are authenticated with server-side sessions and CSRF checks.
+- Project and global roles are evaluated per request and subscription.
+- File access is canonicalized inside authorized project roots.
+- Service previews target loopback only.
+- Remote nodes use expiring pairing secrets, hashed credentials and revocation.
+- API tokens are hashed; creation-time secrets are shown once.
+- Plugins remain inert manifests until capability isolation is implemented.
 
 ## Configuration
 
-Environment variables over secure defaults:
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ORBYNODE_BIND` | `127.0.0.1:7676` | Socket address. |
+| `ORBYNODE_PORT` | `7676` | Port shorthand. |
+| `ORBYNODE_DATA_DIR` | `~/.orbynode` | Durable data directory. |
+| `ORBYNODE_STATIC_DIR` | embedded | Serve web assets from disk for development. |
+| `ORBYNODE_LOG_FORMAT` | human-readable | `json` for structured logs. |
+| `RUST_LOG` | `info` | Tracing filter. |
 
-| Variable               | Default             | Meaning                          |
-| ---------------------- | ------------------- | -------------------------------- |
-| `ORBYNODE_BIND`        | `127.0.0.1:7676`    | Listen address. `0.0.0.0` is opt-in only. |
-| `ORBYNODE_PORT`        | `7676`              | Port shorthand for the default host. |
-| `ORBYNODE_DATA_DIR`    | `~/.orbynode`       | Durable data directory.          |
-| `ORBYNODE_STATIC_DIR`  | embedded assets     | Serve the web UI from disk (dev). |
-| `ORBYNODE_LOG_FORMAT`  | human-readable      | `json` for structured JSON logs. |
-| `RUST_LOG`             | `info`              | Tracing filter.                  |
+## Testing
 
-## Build and run
+Unit tests live next to code. Integration-style API tests exercise
+authentication, routing and workflows. The realtime load test checks bounded
+fan-out. CI runs Rust checks on Linux, macOS and Windows plus Bun web checks.
 
-```sh
-(cd web && bun install) && (cd web && bun run build)   # build web UI
-cargo run --release -p orbynode-daemon              # run daemon
-curl -s localhost:7676/health                       # verify
-```
+## Key decisions
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and
-[SECURITY.md](SECURITY.md) for the security model.
+Architecture decisions are recorded in [docs/adr](docs/adr/). The most
+load-bearing decisions cover daemon ownership, PTY abstraction, realtime
+protocol, persistence, authentication, embedded frontend, remote-node identity
+and platform interfaces.
