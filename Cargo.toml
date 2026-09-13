@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth", "crates/agents", "crates/integrations", "crates/files", "crates/services", "crates/nodes", "crates/notifications", "crates/workflows"]
+default-members = ["crates/core", "crates/api", "crates/daemon", "crates/terminal", "crates/realtime", "crates/database", "crates/auth", "crates/agents", "crates/integrations", "crates/files", "crates/services", "crates/nodes", "crates/notifications", "crates/workflows"]
 exclude = ["desktop/tauri"]
 
 [workspace.package]
@@ -33,3 +34,7 @@ tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

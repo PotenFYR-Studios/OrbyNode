@@ -25,7 +25,7 @@ This file tracks status; the plan holds the detail.
 | 15 | Notifications              | ✅ Done          |
 | 16 | Workflows                  | ✅ Done          |
 | 17 | API, MCP, Plugin Foundation| ✅ Done          |
-| 18 | Scale Validation           | Not started |
+| 18 | Scale Validation           | ✅ Done          |
 | 19 | Security Hardening         | Not started |
 | 20 | Release Engineering        | Not started |
 

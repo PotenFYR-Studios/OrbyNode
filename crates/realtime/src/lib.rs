@@ -196,6 +196,11 @@ impl Receiver {
             }
         }
     }
+
+    /// Non-blocking access used by tests and drain paths.
+    pub fn inner(&mut self) -> &mut tokio::sync::broadcast::Receiver<Sequenced> {
+        &mut self.inner
+    }
 }
 
 // ---------- ClientSession ----------
