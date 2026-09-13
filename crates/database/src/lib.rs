@@ -59,6 +59,84 @@ pub struct SessionTerminal {
     pub position: i32,
 }
 
+/// Task states (Plan §26 board columns).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskState {
+    Backlog,
+    Ready,
+    Running,
+    NeedsInput,
+    Review,
+    Completed,
+    Failed,
+}
+
+impl TaskState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TaskState::Backlog => "backlog",
+            TaskState::Ready => "ready",
+            TaskState::Running => "running",
+            TaskState::NeedsInput => "needs_input",
+            TaskState::Review => "review",
+            TaskState::Completed => "completed",
+            TaskState::Failed => "failed",
+        }
+    }
+
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "ready" => TaskState::Ready,
+            "running" => TaskState::Running,
+            "needs_input" => TaskState::NeedsInput,
+            "review" => TaskState::Review,
+            "completed" => TaskState::Completed,
+            "failed" => TaskState::Failed,
+            _ => TaskState::Backlog,
+        }
+    }
+}
+
+/// A unit of work (Plan §26). `version` powers optimistic concurrency (§68).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct Task {
+    pub id: i64,
+    pub project_id: i64,
+    pub title: String,
+    pub description: String,
+    pub state: TaskState,
+    pub priority: i32,
+    pub assignee: String,
+    pub agent: String,
+    pub branch: String,
+    pub worktree: String,
+    pub version: i64,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+/// Raw task row shape (13 columns, sqlx::query_as target).
+pub type TaskRow = (
+    i64,
+    i64,
+    String,
+    String,
+    String,
+    i32,
+    String,
+    String,
+    String,
+    String,
+    i64,
+    i64,
+    i64,
+);
+
+/// Optimistic-concurrency conflict (§68): entity version moved underneath us.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Conflict;
+
 #[derive(Debug)]
 pub enum DbError {
     Sqlx(sqlx::Error),
@@ -130,6 +208,28 @@ const MIGRATIONS: &[(i64, &str)] = &[
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        "#,
+    ),
+    (
+        3,
+        r#"
+        CREATE TABLE tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            state TEXT NOT NULL DEFAULT 'backlog',
+            priority INTEGER NOT NULL DEFAULT 3,
+            assignee TEXT NOT NULL DEFAULT '',
+            agent TEXT NOT NULL DEFAULT '',
+            branch TEXT NOT NULL DEFAULT '',
+            worktree TEXT NOT NULL DEFAULT '',
+            version INTEGER NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_tasks_project ON tasks (project_id, state);
         "#,
     ),
     (
@@ -331,6 +431,140 @@ impl Db {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
+    // ---- tasks ----
+
+    pub async fn create_task(
+        &self,
+        project_id: i64,
+        title: &str,
+        description: &str,
+        priority: i32,
+    ) -> DbResult<Task> {
+        let now = now_secs();
+        let id = sqlx::query(
+            "INSERT INTO tasks (project_id, title, description, priority, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(project_id)
+        .bind(title)
+        .bind(description)
+        .bind(priority)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?
+        .last_insert_rowid();
+        Ok(Task {
+            id,
+            project_id,
+            title: title.to_owned(),
+            description: description.to_owned(),
+            state: TaskState::Backlog,
+            priority,
+            assignee: String::new(),
+            agent: String::new(),
+            branch: String::new(),
+            worktree: String::new(),
+            version: 1,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    fn task_row(row: TaskRow) -> Task {
+        Task {
+            id: row.0,
+            project_id: row.1,
+            title: row.2,
+            description: row.3,
+            state: TaskState::parse(&row.4),
+            priority: row.5,
+            assignee: row.6,
+            agent: row.7,
+            branch: row.8,
+            worktree: row.9,
+            version: row.10,
+            created_at: row.11,
+            updated_at: row.12,
+        }
+    }
+
+    const TASK_COLUMNS: &str = "id, project_id, title, description, state, priority, assignee, agent, branch, worktree, version, created_at, updated_at";
+
+    pub async fn get_task(&self, id: i64) -> DbResult<Option<Task>> {
+        let row: Option<TaskRow> =
+            sqlx::query_as(&format!(
+                "SELECT {} FROM tasks WHERE id = ?",
+                Self::TASK_COLUMNS
+            ))
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(row.map(Self::task_row))
+    }
+
+    pub async fn list_tasks(&self, project_id: i64) -> DbResult<Vec<Task>> {
+        let rows: Vec<TaskRow> =
+            sqlx::query_as(&format!(
+                "SELECT {} FROM tasks WHERE project_id = ? ORDER BY priority, id",
+                Self::TASK_COLUMNS
+            ))
+            .bind(project_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(Self::task_row).collect())
+    }
+
+    /// Move a task between board states with optimistic version check (§68):
+    /// fails with `DbError::NotFound`-style conflict when version mismatches.
+    pub async fn move_task(
+        &self,
+        id: i64,
+        new_state: TaskState,
+        expected_version: i64,
+    ) -> DbResult<Result<Task, Conflict>> {
+        let now = now_secs();
+        let result = sqlx::query(
+            "UPDATE tasks SET state = ?, version = version + 1, updated_at = ?
+             WHERE id = ? AND version = ?",
+        )
+        .bind(new_state.as_str())
+        .bind(now)
+        .bind(id)
+        .bind(expected_version)
+        .execute(&self.pool)
+        .await?;
+        if result.rows_affected() == 0 {
+            return Ok(Err(Conflict));
+        }
+        Ok(Ok(self.get_task(id).await?.expect("just updated")))
+    }
+
+    /// Attach branch/worktree metadata (worktree-per-task, §25).
+    pub async fn set_task_worktree(
+        &self,
+        id: i64,
+        branch: &str,
+        worktree: &str,
+    ) -> DbResult<()> {
+        sqlx::query("UPDATE tasks SET branch = ?, worktree = ?, updated_at = ? WHERE id = ?")
+            .bind(branch)
+            .bind(worktree)
+            .bind(now_secs())
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_task(&self, id: i64) -> DbResult<()> {
+        sqlx::query("DELETE FROM tasks WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     // ---- settings ----
 
     pub async fn get_setting(&self, key: &str) -> DbResult<Option<String>> {
@@ -433,6 +667,53 @@ mod tests {
         let v = db.get_setting("ui.theme").await.unwrap();
         assert_eq!(v, Some("light".to_owned()));
         assert_eq!(db.get_setting("missing").await.unwrap(), None);
+    }
+
+
+    #[tokio::test]
+    async fn task_crud_and_board_flow() {
+        let db = mem_db().await;
+        let p = db.create_project("app", "/tmp/app").await.unwrap();
+        let t = db.create_task(p.id, "Add OAuth", "implement login", 2).await.unwrap();
+        assert_eq!(t.state, TaskState::Backlog);
+        assert_eq!(t.version, 1);
+
+        // Optimistic move: correct version succeeds, bumps version.
+        let moved = db.move_task(t.id, TaskState::Ready, t.version).await.unwrap().unwrap();
+        assert_eq!(moved.state, TaskState::Ready);
+        assert_eq!(moved.version, 2);
+
+        // Stale version conflicts (§68).
+        let conflict = db.move_task(t.id, TaskState::Running, t.version).await.unwrap();
+        assert_eq!(conflict, Err(Conflict));
+
+        // Fresh version succeeds.
+        let moved = db.move_task(t.id, TaskState::Running, moved.version).await.unwrap().unwrap();
+        assert_eq!(moved.state, TaskState::Running);
+        assert_eq!(db.list_tasks(p.id).await.unwrap()[0].state, TaskState::Running);
+    }
+
+    #[tokio::test]
+    async fn task_worktree_metadata_roundtrip() {
+        let db = mem_db().await;
+        let p = db.create_project("app", "/tmp/app").await.unwrap();
+        let t = db.create_task(p.id, "T", "", 3).await.unwrap();
+        db.set_task_worktree(t.id, "agent/oauth", "/home/u/.orbynode/worktrees/app/oauth").await.unwrap();
+        let got = db.get_task(t.id).await.unwrap().unwrap();
+        assert_eq!(got.branch, "agent/oauth");
+        assert_eq!(got.worktree, "/home/u/.orbynode/worktrees/app/oauth");
+    }
+
+    #[tokio::test]
+    async fn tasks_are_scoped_per_project_and_deletable() {
+        let db = mem_db().await;
+        let p1 = db.create_project("one", "/tmp/one").await.unwrap();
+        let p2 = db.create_project("two", "/tmp/two").await.unwrap();
+        db.create_task(p1.id, "a", "", 3).await.unwrap();
+        let t2 = db.create_task(p2.id, "b", "", 3).await.unwrap();
+        assert_eq!(db.list_tasks(p1.id).await.unwrap().len(), 1);
+        db.delete_task(t2.id).await.unwrap();
+        assert!(db.get_task(t2.id).await.unwrap().is_none());
     }
 
     #[tokio::test]

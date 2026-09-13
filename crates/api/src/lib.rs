@@ -49,6 +49,7 @@ impl From<orbynode_database::DbError> for ApiError {
     }
 }
 pub mod project_routes;
+pub mod task_routes;
 pub mod terminal_routes;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_assets.rs"));
@@ -170,6 +171,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(agent_routes::routes())
         .merge(integration_routes::routes())
         .merge(file_routes::routes())
+        .merge(task_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_routes::require_auth,

@@ -5,6 +5,7 @@
 //! rejected; no `..` traversal.
 
 pub mod git;
+pub mod worktree;
 
 // ---------- Public API ----------
 
