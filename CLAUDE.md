@@ -37,6 +37,7 @@ before non-trivial changes.
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 npm run check --prefix web && npm run build --prefix web
+(cd docs && bun test && bun run typecheck && bun run build)
 ```
 
 All four must pass. Do not mark work complete merely because it compiles.

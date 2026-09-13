@@ -92,6 +92,18 @@ termination behavior. Keep output and timeout bounds explicit.
 Current web gate is strict TypeScript and Vite build. Component and interaction
 tests may be added without introducing Next.js.
 
+## Documentation site
+
+The public docs site has Bun tests for its content manifest, routes, link
+normalization and prerender helpers. Its production build renders every route
+to HTML and fails when a Markdown source or installer artifact is missing.
+
+```bash
+(cd docs && bun test)
+(cd docs && bun run typecheck)
+(cd docs && bun run build)
+```
+
 ## Security tests
 
 Every security-sensitive change should cover:

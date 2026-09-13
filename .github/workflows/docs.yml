@@ -1,0 +1,73 @@
+name: Deploy docs site to GitHub Pages
+
+# Hybrid hosting model:
+# - The repo serves Pages from the custom domain orbynode.docs.potenfyr.in
+#   (the CNAME file is shipped in docs/public/).
+# - If the domain is ever removed, configure-pages falls back to
+#   https://potenfyr-studios.github.io/OrbyNode/ and the build switches to a
+#   relative base so the same artifact serves both hosts.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "scripts/install.sh"
+      - "scripts/install.ps1"
+      - "ARCHITECTURE.md"
+      - "ROADMAP.md"
+      - "SECURITY.md"
+      - "CONTRIBUTING.md"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# GitHub Pages is unavailable for private repos on plans without Pages
+# support (configure-pages returns 404). Skip cleanly until the repo is
+# public; the workflow works as-is once that happens.
+jobs:
+  build:
+    if: github.event.repository.private != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Configure Pages (detects custom domain from repo settings)
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Build docs site
+        working-directory: docs
+        run: |
+          bun install --frozen-lockfile
+          # Hybrid base: custom domain -> root path; otherwise /OrbyNode/
+          BASE_URL="${{ steps.pages.outputs.base_url }}"
+          case "$BASE_URL" in
+            ""|*github.io*) export VITE_BASE="/OrbyNode/" ;;
+            *) export VITE_BASE="/" ;;
+          esac
+          bun run build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

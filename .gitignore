@@ -8,10 +8,15 @@ Plan.md
 # Node / web
 node_modules/
 web/dist/
+docs/dist/
 *.tsbuildinfo
 
-# Editor / tooling
+# Editor / local AI tooling
 .serena/
+.superpowers/
+.claude/
+.agents/
+.codex/
 .idea/
 .vscode/
 *.swp

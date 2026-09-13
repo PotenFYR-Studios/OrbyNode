@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="og-title og-desc">
+  <title id="og-title">OrbyNode — Persistent Control Plane for Coding Agents</title>
+  <desc id="og-desc">Persistent coding agents, real PTYs, workspaces, files, Git tasks, and remote nodes in one self-hosted daemon.</desc>
+  <rect width="1200" height="630" fill="#0b0d14"/>
+  <!-- subtle grid -->
+  <g stroke="#1c2030" stroke-width="1">
+    <path d="M0 105H1200M0 210H1200M0 315H1200M0 420H1200M0 525H1200"/>
+    <path d="M120 0V630M240 0V630M360 0V630M480 0V630M600 0V630M720 0V630M840 0V630M960 0V630M1080 0V630"/>
+  </g>
+  <!-- orbital mark -->
+  <g transform="translate(600 190)">
+    <circle r="86" fill="none" stroke="#5b8cff" stroke-width="10"/>
+    <circle r="30" fill="#e8eaf2"/>
+    <circle cx="72" cy="-62" r="21" fill="#5b8cff"/>
+  </g>
+  <text x="600" y="392" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="86" font-weight="800" fill="#e8eaf2">OrbyNode</text>
+  <text x="600" y="465" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="34" font-weight="500" fill="#9aa3bd">Persistent control plane for coding agents</text>
+  <!-- contrast-safe pill -->
+  <rect x="432" y="512" width="336" height="56" rx="28" fill="#141826"/>
+  <text x="600" y="548" text-anchor="middle" font-family="'Fira Code','Consolas',monospace" font-size="26" fill="#8fb0ff">self-hosted · real PTYs</text>
+</svg>

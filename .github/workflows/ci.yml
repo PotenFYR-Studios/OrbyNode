@@ -40,6 +40,19 @@ jobs:
       - run: (cd web && bun run check)
       - run: (cd web && bun run build)
 
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: (cd docs && bun install --frozen-lockfile)
+      - run: (cd docs && bun test)
+      - run: (cd docs && bun run typecheck)
+      - run: (cd docs && bun run build)
+
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest

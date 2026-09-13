@@ -57,6 +57,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 (cd web && bun run check)
 (cd web && bun run build)
+(cd docs && bun test)
+(cd docs && bun run typecheck)
+(cd docs && bun run build)
 ```
 
 Equivalent:
@@ -137,8 +140,8 @@ Use GitHub Issues and include:
 
 ## Reporting vulnerabilities
 
-Do not open public issues. Follow [SECURITY.md](SECURITY.md).
+Do not open public issues. Follow [SECURITY.md](../SECURITY.md).
 
 ## License
 
-Contributions are licensed under [Apache-2.0 with the Commons Clause](LICENSE).
+Contributions are licensed under [Apache-2.0 with the Commons Clause](../LICENSE).

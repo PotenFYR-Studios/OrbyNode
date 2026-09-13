@@ -68,6 +68,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 (cd web && bun run check)
 (cd web && bun run build)
+(cd docs && bun test)
+(cd docs && bun run typecheck)
+(cd docs && bun run build)
 ```
 
 You can run the same gates with:

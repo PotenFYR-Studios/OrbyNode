@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+# AI crawlers welcome - OrbyNode documentation is public
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+
+Sitemap: https://orbynode.docs.potenfyr.in/sitemap.xml

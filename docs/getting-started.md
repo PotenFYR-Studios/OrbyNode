@@ -94,6 +94,7 @@ RBAC is enforced on every route and WebSocket subscription. Audit logs track all
 - [Architecture](../ARCHITECTURE.md) — daemon-centric design and realtime model
 - [Security](security-model.md) — authentication, RBAC, audit, threat model
 - [REST API](rest-api.md) — public `/api/v1` surface for external integrations
+- [Documentation site](https://orbynode.docs.potenfyr.in) — searchable, prerendered guide
 - [Development](development.md) — build from source, run tests, frontend workflow
 - [Operations](operations.md) — deployment, monitoring, backup, upgrade
 - [Roadmap](../ROADMAP.md) — milestone status and v1.0 readiness

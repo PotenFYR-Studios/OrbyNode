@@ -38,7 +38,7 @@ tasks, services and machine state in one daemon.
 |---|---|
 | [REST API](rest-api.md) | Public `/api/v1` surface: auth, projects, panes, workspaces |
 | [Workflows](workflows.md) | Configuration-driven orchestration |
-| [Frontend](frontend.md) | Web client architecture and realtime conventions |
+| [Frontend](frontend.md) | Product client and public docs-site architecture |
 
 ## Contributing
 
@@ -55,6 +55,8 @@ tasks, services and machine state in one daemon.
 |---|---|
 | [FAQ](faq.md) | Common questions on security, architecture, licensing |
 | [License](license.md) | Apache-2.0 + Commons Clause in plain language |
+| [Roadmap](../ROADMAP.md) | Completed milestones, current release focus, non-goals |
+| [Security policy](../SECURITY.md) | Private disclosure process and supported versions |
 | [v1 readiness](v1-readiness.md) | Release gates for the v1.0 label |
 
 ## Architecture decision records

@@ -27,8 +27,8 @@ crates/services      ports, services and process snapshots
 crates/nodes         remote-node identity and pairing
 crates/notifications browser events and webhooks
 crates/workflows     configuration-driven orchestration
-web                  Vite + React + TypeScript client
-docs                 project documentation and ADRs
+web                  embedded Vite + React + TypeScript product client
+docs                 Markdown sources and prerendered Vite docs site
 ```
 
 ## Setup
@@ -86,6 +86,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 (cd web && bun run check)
 (cd web && bun run build)
+(cd docs && bun test)
+(cd docs && bun run typecheck)
+(cd docs && bun run build)
 ```
 
 Equivalent:
