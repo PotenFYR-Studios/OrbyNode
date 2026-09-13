@@ -56,7 +56,7 @@ Environment variables over secure defaults:
 ## Build and run
 
 ```sh
-bun install --cwd web && bun run --cwd web build   # build web UI
+(cd web && bun install) && (cd web && bun run build)   # build web UI
 cargo run --release -p orbynode-daemon              # run daemon
 curl -s localhost:7676/health                       # verify
 ```

@@ -13,9 +13,9 @@ echo "==> cargo test"
 cargo test --workspace
 
 echo "==> web typecheck"
-bun run --cwd web check
+(cd web && bun run check)
 
 echo "==> web build"
-bun run --cwd web build
+(cd web && bun run build)
 
 echo "All checks passed."

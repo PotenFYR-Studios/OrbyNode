@@ -13,7 +13,7 @@ come back later: everything keeps running and reconnects cleanly.
 Requirements: Rust 1.85+, Bun 1.1+, Node 20+ for CI compatibility.
 
 ```sh
-bun install --cwd web && bun run --cwd web build
+(cd web && bun install) && (cd web && bun run build)
 cargo run --release -p orbynode-daemon
 ```
 
@@ -38,7 +38,7 @@ breaking interface changes and the SBOM location.
 Build locally with:
 
 ```sh
-bun install --cwd web && bun run --cwd web build
+(cd web && bun install) && (cd web && bun run build)
 cargo build --release -p orbynode-daemon
 ```
 

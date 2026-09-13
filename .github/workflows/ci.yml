@@ -36,6 +36,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install --cwd web
-      - run: bun run check --cwd web
-      - run: bun run --cwd web build
+      - run: (cd web && bun install)
+      - run: (cd web && bun run check)
+      - run: (cd web && bun run build)

@@ -17,7 +17,7 @@ directly and embedded by the daemon.
 ```sh
 bun install
 bun run dev
-bun run --cwd web check
+bun run check
 bun run build
 ```
 

@@ -48,8 +48,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - run: bun install --cwd web
-      - run: bun run --cwd web build
+      - run: (cd web && bun install)
+      - run: (cd web && bun run build)
       - run: cargo build --release --locked -p orbynode-daemon --target ${{ matrix.target }}
       - name: Create SBOM
         shell: bash
@@ -73,6 +73,16 @@ jobs:
           sha256sum "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
       - name: Sign artifact
         uses: sigstore/cosign-installer@v3
+      - name: Verify locked build inputs
+        shell: bash
+        run: |
+          cargo metadata --locked --format-version 1 > /dev/null
+          test -f web/bun.lock
+      - name: Verify locked build inputs
+        shell: bash
+        run: |
+          cargo metadata --locked --format-version 1 > /dev/null
+          test -f web/bun.lock
       - name: Cosign sign
         shell: bash
         run: |

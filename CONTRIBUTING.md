@@ -9,13 +9,13 @@ Thanks for helping build OrbyNode. Keep changes milestone-scoped (see
 Requirements: Rust 1.85+, Bun 1.1+, Node 20+ for CI compatibility.
 
 ```sh
-bun install --cwd web          # frontend deps
+(cd web && bun install)          # frontend deps
 cargo build                  # backend
 ```
 
 ## Workflow
 
-1. Build the web UI (`bun run --cwd web build`) so the daemon embeds real
+1. Build the web UI (`(cd web && bun run build)`) so the daemon embeds real
    assets. Without it, the daemon still builds and serves a placeholder page.
 2. Run the daemon: `cargo run -p orbynode-daemon` (or with
    `ORBYNODE_STATIC_DIR=web/dist` to iterate on the UI without rebuilding Rust).
@@ -26,8 +26,8 @@ cargo build                  # backend
 ```sh
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-bun run --cwd web check
-bun run --cwd web build
+(cd web && bun run check)
+(cd web && bun run build)
 ```
 
 ## Ground rules
