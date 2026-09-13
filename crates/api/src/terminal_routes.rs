@@ -13,9 +13,23 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use orbynode_terminal::{TerminalConfig, TerminalError, TerminalId, TerminalInfo};
+use orbynode_terminal::{TerminalConfig, TerminalId, TerminalInfo};
 
-use crate::AppState;
+use crate::{ApiError, AppState};
+
+/// Global-permission gate: global perms (create/terminate) use the user's
+/// global role; project-scoped perms come with M13 remote projects.
+async fn require_perm(
+    _state: &AppState,
+    user: &orbynode_auth::User,
+    perm: orbynode_auth::Perm,
+) -> Result<(), ApiError> {
+    if orbynode_auth::role_has(user.role, perm) {
+        Ok(())
+    } else {
+        Err(ApiError(StatusCode::FORBIDDEN))
+    }
+}
 use futures_util::{SinkExt, StreamExt};
 
 pub fn routes() -> Router<AppState> {
@@ -30,36 +44,12 @@ pub fn routes() -> Router<AppState> {
         .route("/terminals/{id}/ws", get(ws_upgrade))
 }
 
-/// Small error wrapper so handler `Result`s don't trip clippy's
-/// `result_large_err` (a full `Response` is >128 bytes on the stack).
-#[derive(Debug)]
-struct ApiError(StatusCode);
-
-impl From<TerminalError> for ApiError {
-    fn from(e: TerminalError) -> Self {
-        match e {
-            TerminalError::NotFound => ApiError(StatusCode::NOT_FOUND),
-            TerminalError::Io(_) => ApiError(StatusCode::CONFLICT),
-        }
-    }
-}
-
-impl From<ApiError> for Response {
-    fn from(e: ApiError) -> Self {
-        e.0.into_response()
-    }
-}
-
-impl axum::response::IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        self.0.into_response()
-    }
-}
-
 async fn create_terminal(
     State(state): State<AppState>,
+    axum::Extension(user): axum::Extension<orbynode_auth::User>,
     body: String,
 ) -> Result<Json<TerminalInfo>, ApiError> {
+    require_perm(&state, &user, orbynode_auth::Perm::TerminalCreate).await?;
     // Body is optional; an empty body means default config.
     let body: CreateTerminalBody = if body.trim().is_empty() {
         CreateTerminalBody::default()
@@ -74,6 +64,14 @@ async fn create_terminal(
     };
     let term = state.terminals.create(cfg).map_err(ApiError::from)?;
     state.bridge_terminal_to_bus(term.id());
+    state
+        .record(
+            Some(&user),
+            "terminal.create",
+            &format!("terminal:{}", term.id()),
+            "",
+        )
+        .await;
     Ok(Json(term.info()))
 }
 
@@ -119,9 +117,19 @@ struct InputBody {
 
 async fn write_input(
     State(state): State<AppState>,
+    axum::Extension(user): axum::Extension<orbynode_auth::User>,
     Path(id): Path<TerminalId>,
     Json(body): Json<InputBody>,
 ) -> Result<StatusCode, ApiError> {
+    require_perm(&state, &user, orbynode_auth::Perm::TerminalWrite).await?;
+    state
+        .record(
+            Some(&user),
+            "terminal.input",
+            &format!("terminal:{id}"),
+            &format!("{} bytes", body.data.len()),
+        )
+        .await;
     let term = state
         .terminals
         .get(id)

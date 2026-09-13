@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 serde = { workspace = true }
+serde_json = { workspace = true }
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 tokio = { workspace = true }
 tracing = { workspace = true }

@@ -92,6 +92,138 @@ pub struct SessionInfo {
     pub csrf: String,
 }
 
+/// Fine-grained permissions (Plan §15 permission model).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Perm {
+    ProjectView,
+    ProjectManage,
+    TerminalView,
+    TerminalWrite,
+    TerminalCreate,
+    TerminalTerminate,
+    AgentView,
+    AgentStart,
+    AgentControl,
+    AgentApprove,
+    FilesView,
+    FilesWrite,
+    GitView,
+    GitWrite,
+    TasksView,
+    TasksWrite,
+    ServicesView,
+    ServicesControl,
+    SettingsView,
+    SettingsManage,
+    UsersView,
+    UsersManage,
+    AuditView,
+}
+
+/// Role -> permission set (Plan §15 roles).
+pub fn role_permissions(role: Role) -> &'static [Perm] {
+    use Perm::*;
+    match role {
+        Role::Owner => &[
+            ProjectView,
+            ProjectManage,
+            TerminalView,
+            TerminalWrite,
+            TerminalCreate,
+            TerminalTerminate,
+            AgentView,
+            AgentStart,
+            AgentControl,
+            AgentApprove,
+            FilesView,
+            FilesWrite,
+            GitView,
+            GitWrite,
+            TasksView,
+            TasksWrite,
+            ServicesView,
+            ServicesControl,
+            SettingsView,
+            SettingsManage,
+            UsersView,
+            UsersManage,
+            AuditView,
+        ],
+        Role::Admin => &[
+            ProjectView,
+            ProjectManage,
+            TerminalView,
+            TerminalWrite,
+            TerminalCreate,
+            TerminalTerminate,
+            AgentView,
+            AgentStart,
+            AgentControl,
+            AgentApprove,
+            FilesView,
+            FilesWrite,
+            GitView,
+            GitWrite,
+            TasksView,
+            TasksWrite,
+            ServicesView,
+            ServicesControl,
+            SettingsView,
+            SettingsManage,
+            UsersView,
+            UsersManage,
+            AuditView,
+        ],
+        Role::Operator => &[
+            ProjectView,
+            TerminalView,
+            TerminalWrite,
+            TerminalCreate,
+            TerminalTerminate,
+            AgentView,
+            AgentStart,
+            AgentControl,
+            AgentApprove,
+            FilesView,
+            FilesWrite,
+            GitView,
+            GitWrite,
+            TasksView,
+            TasksWrite,
+            ServicesView,
+            ServicesControl,
+        ],
+        Role::Developer => &[
+            ProjectView,
+            TerminalView,
+            TerminalWrite,
+            TerminalCreate,
+            AgentView,
+            AgentStart,
+            FilesView,
+            FilesWrite,
+            GitView,
+            GitWrite,
+            TasksView,
+            TasksWrite,
+            ServicesView,
+        ],
+        Role::Viewer => &[
+            ProjectView,
+            TerminalView,
+            AgentView,
+            FilesView,
+            GitView,
+            TasksView,
+            ServicesView,
+        ],
+    }
+}
+
+pub fn role_has(role: Role, perm: Perm) -> bool {
+    role_permissions(role).contains(&perm)
+}
+
 // ---------- Implementation ----------
 
 // Argon2 defaults (v0.5 `Argon2::default()` = Argon2id; OWASP-equivalent baseline).
@@ -464,6 +596,30 @@ mod tests {
         }
         let e = s.login("admin", "good-pass-3").await.unwrap_err();
         assert_eq!(e, AuthError::Locked, "even correct password is locked");
+    }
+
+    #[test]
+    fn viewer_cannot_write_terminal_or_files() {
+        // M11 acceptance (Plan §134): Viewer is read-only.
+        assert!(role_has(Role::Viewer, Perm::TerminalView));
+        assert!(!role_has(Role::Viewer, Perm::TerminalWrite));
+        assert!(!role_has(Role::Viewer, Perm::FilesWrite));
+        assert!(!role_has(Role::Viewer, Perm::GitWrite));
+    }
+
+    #[test]
+    fn developer_writes_but_cannot_manage_users() {
+        assert!(role_has(Role::Developer, Perm::TerminalWrite));
+        assert!(role_has(Role::Developer, Perm::FilesWrite));
+        assert!(!role_has(Role::Developer, Perm::UsersManage));
+        assert!(!role_has(Role::Developer, Perm::ProjectManage));
+    }
+
+    #[test]
+    fn owner_has_everything() {
+        for perm in role_permissions(Role::Admin) {
+            assert!(role_has(Role::Owner, *perm), "owner ⊇ admin: {perm:?}");
+        }
     }
 
     #[tokio::test]

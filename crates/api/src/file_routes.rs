@@ -8,6 +8,8 @@ use axum::{Json, Router};
 use orbynode_files::git::GitRepo;
 use orbynode_files::{FilesError, Workspace};
 
+use axum::Extension;
+
 use crate::{ApiError, AppState};
 
 pub fn routes() -> Router<AppState> {
@@ -25,6 +27,23 @@ pub fn routes() -> Router<AppState> {
         .route("/projects/{id}/git/commit", post(git_commit))
         .route("/projects/{id}/git/branch", post(git_branch))
         .route("/projects/{id}/git/switch", post(git_switch))
+}
+
+/// Resolve caller's project context, enforcing `perm` (M11 RBAC).
+async fn project_ctx(
+    state: &AppState,
+    user: &orbynode_auth::User,
+    project_id: i64,
+    perm: orbynode_auth::Perm,
+) -> Result<orbynode_auth::Role, ApiError> {
+    let role = state
+        .project_role(user, project_id)
+        .await
+        .ok_or(ApiError(StatusCode::FORBIDDEN))?;
+    if !orbynode_auth::role_has(role, perm) {
+        return Err(ApiError(StatusCode::FORBIDDEN));
+    }
+    Ok(role)
 }
 
 async fn workspace_of(state: &AppState, project_id: i64) -> Result<Workspace, ApiError> {
@@ -73,9 +92,11 @@ struct ListQuery {
 
 async fn list_files(
     State(state): State<AppState>,
+    Extension(user): Extension<orbynode_auth::User>,
     Path(id): Path<i64>,
     Query(q): Query<ListQuery>,
 ) -> Result<Json<Vec<orbynode_files::FileEntry>>, ApiError> {
+    project_ctx(&state, &user, id, orbynode_auth::Perm::FilesView).await?;
     let ws = workspace_of(&state, id).await?;
     let path = if q.path.is_empty() { "." } else { &q.path };
     Ok(Json(ws.list(path).map_err(files_err)?))
@@ -88,9 +109,11 @@ struct ReadQuery {
 
 async fn read_file(
     State(state): State<AppState>,
+    Extension(user): Extension<orbynode_auth::User>,
     Path(id): Path<i64>,
     Query(q): Query<ReadQuery>,
 ) -> Result<String, ApiError> {
+    project_ctx(&state, &user, id, orbynode_auth::Perm::FilesView).await?;
     let ws = workspace_of(&state, id).await?;
     let bytes = ws.read(&q.path).map_err(files_err)?;
     String::from_utf8(bytes).map_err(|_| ApiError(StatusCode::UNSUPPORTED_MEDIA_TYPE))
@@ -104,11 +127,21 @@ struct WriteBody {
 
 async fn write_file(
     State(state): State<AppState>,
+    Extension(user): Extension<orbynode_auth::User>,
     Path(id): Path<i64>,
     Json(body): Json<WriteBody>,
 ) -> Result<StatusCode, ApiError> {
+    project_ctx(&state, &user, id, orbynode_auth::Perm::FilesWrite).await?;
     let ws = workspace_of(&state, id).await?;
     ws.write(&body.path, &body.contents).map_err(files_err)?;
+    state
+        .record(
+            Some(&user),
+            "files.write",
+            &format!("project:{id}/{}", body.path),
+            &format!("{} bytes", body.contents.len()),
+        )
+        .await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -119,10 +152,20 @@ struct DeleteQuery {
 
 async fn delete_file(
     State(state): State<AppState>,
+    Extension(user): Extension<orbynode_auth::User>,
     Path(id): Path<i64>,
     Query(q): Query<DeleteQuery>,
 ) -> Result<StatusCode, ApiError> {
+    project_ctx(&state, &user, id, orbynode_auth::Perm::FilesWrite).await?;
     let ws = workspace_of(&state, id).await?;
+    state
+        .record(
+            Some(&user),
+            "files.delete",
+            &format!("project:{id}/{}", q.path),
+            "",
+        )
+        .await;
     ws.delete(&q.path).map_err(files_err)?;
     Ok(StatusCode::NO_CONTENT)
 }

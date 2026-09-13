@@ -35,6 +35,15 @@ impl ApiError {
     }
 }
 
+impl From<orbynode_terminal::TerminalError> for ApiError {
+    fn from(e: orbynode_terminal::TerminalError) -> Self {
+        match e {
+            orbynode_terminal::TerminalError::NotFound => ApiError(StatusCode::NOT_FOUND),
+            orbynode_terminal::TerminalError::Io(_) => ApiError(StatusCode::CONFLICT),
+        }
+    }
+}
+
 impl From<orbynode_auth::AuthError> for ApiError {
     fn from(e: orbynode_auth::AuthError) -> Self {
         tracing::error!(error = %e, "auth error");
@@ -49,6 +58,7 @@ impl From<orbynode_database::DbError> for ApiError {
     }
 }
 pub mod project_routes;
+pub mod rbac_routes;
 pub mod service_routes;
 pub mod task_routes;
 pub mod terminal_routes;
@@ -141,6 +151,43 @@ impl AppState {
         });
     }
 
+    /// Effective role for a user on a project (M11, Plan §15): global Owner/
+    /// Admin see everything; otherwise the project_members row applies.
+    pub async fn project_role(
+        &self,
+        user: &orbynode_auth::User,
+        project_id: i64,
+    ) -> Option<orbynode_auth::Role> {
+        match user.role {
+            orbynode_auth::Role::Owner | orbynode_auth::Role::Admin => Some(user.role),
+            _ => {
+                let role = self
+                    .db
+                    .member_role(project_id, user.id)
+                    .await
+                    .ok()
+                    .flatten()?;
+                parse_member_role(&role)
+            }
+        }
+    }
+
+    /// Audit + best-effort (never fails a request because audit failed).
+    pub async fn record(
+        &self,
+        user: Option<&orbynode_auth::User>,
+        action: &str,
+        target: &str,
+        detail: &str,
+    ) {
+        let (uid, name) = user
+            .map(|u| (Some(u.id), u.username.as_str()))
+            .unwrap_or((None, ""));
+        if let Err(e) = self.db.audit(uid, name, action, target, detail).await {
+            tracing::error!(error = %e, "audit write failed");
+        }
+    }
+
     /// Track a subscription (M2: always true; M11 revocation replaces this).
     pub fn gateway_track(&self, _stream: &orbynode_realtime::Stream) -> bool {
         true
@@ -175,6 +222,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(agent_routes::routes())
         .merge(integration_routes::routes())
         .merge(file_routes::routes())
+        .merge(rbac_routes::routes())
         .merge(task_routes::routes())
         .merge(service_routes::routes())
         .route_layer(axum::middleware::from_fn_with_state(
@@ -259,6 +307,17 @@ fn mime(path: &str) -> &'static str {
 
 /// Process-wide default in-memory DB for default/test state. A static runtime
 /// avoids nested-runtime panics when `default()` runs inside tokio tests.
+fn parse_member_role(role: &str) -> Option<orbynode_auth::Role> {
+    match role {
+        "owner" => Some(orbynode_auth::Role::Owner),
+        "admin" => Some(orbynode_auth::Role::Admin),
+        "operator" => Some(orbynode_auth::Role::Operator),
+        "developer" => Some(orbynode_auth::Role::Developer),
+        "viewer" => Some(orbynode_auth::Role::Viewer),
+        _ => None,
+    }
+}
+
 fn test_db() -> orbynode_database::Db {
     static DB: std::sync::OnceLock<orbynode_database::Db> = std::sync::OnceLock::new();
     DB.get_or_init(|| {

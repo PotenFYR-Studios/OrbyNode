@@ -116,6 +116,18 @@ pub struct Task {
     pub updated_at: i64,
 }
 
+/// One audit-log entry (Plan §48).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, sqlx::FromRow)]
+pub struct AuditEntry {
+    pub id: i64,
+    pub user_id: Option<i64>,
+    pub username: String,
+    pub action: String,
+    pub target: String,
+    pub detail: String,
+    pub created_at: i64,
+}
+
 /// Raw task row shape (13 columns, sqlx::query_as target).
 pub type TaskRow = (
     i64,
@@ -208,6 +220,29 @@ const MIGRATIONS: &[(i64, &str)] = &[
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        "#,
+    ),
+    (
+        4,
+        r#"
+        CREATE TABLE project_members (
+            project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            PRIMARY KEY (project_id, user_id)
+        );
+
+        CREATE TABLE audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            username TEXT NOT NULL DEFAULT '',
+            action TEXT NOT NULL,
+            target TEXT NOT NULL DEFAULT '',
+            detail TEXT NOT NULL DEFAULT '',
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_audit_time ON audit_log (created_at);
         "#,
     ),
     (
@@ -558,6 +593,124 @@ impl Db {
         Ok(())
     }
 
+    /// Insert a user directly with a placeholder hash (RBAC tests only).
+    pub async fn create_user_noauth(&self, username: &str, display_name: &str) -> DbResult<i64> {
+        let now = now_secs();
+        let id = sqlx::query(
+            "INSERT INTO users (username, display_name, password_hash, role, created_at)
+             VALUES (?, ?, 'x', 'developer', ?)",
+        )
+        .bind(username)
+        .bind(display_name)
+        .bind(now)
+        .execute(&self.pool)
+        .await?
+        .last_insert_rowid();
+        Ok(id)
+    }
+
+    pub async fn list_users(&self) -> DbResult<Vec<serde_json::Value>> {
+        let rows: Vec<(i64, String, String, String)> = sqlx::query_as(
+            "SELECT id, username, display_name, role FROM users ORDER BY id",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, username, display_name, role)| {
+                serde_json::json!({"id": id, "username": username, "display_name": display_name, "role": role})
+            })
+            .collect())
+    }
+
+    pub async fn list_members(&self, project_id: i64) -> DbResult<Vec<serde_json::Value>> {
+        let rows: Vec<(i64, String, String)> = sqlx::query_as(
+            "SELECT pm.user_id, u.username, pm.role
+             FROM project_members pm JOIN users u ON u.id = pm.user_id
+             WHERE pm.project_id = ? ORDER BY u.username",
+        )
+        .bind(project_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(user_id, username, role)| {
+                serde_json::json!({"user_id": user_id, "username": username, "role": role})
+            })
+            .collect())
+    }
+
+    // ---- project membership (Plan §15) ----
+
+    pub async fn set_member(&self, project_id: i64, user_id: i64, role: &str) -> DbResult<()> {
+        sqlx::query(
+            "INSERT INTO project_members (project_id, user_id, role)
+             VALUES (?, ?, ?)
+             ON CONFLICT (project_id, user_id) DO UPDATE SET role = excluded.role",
+        )
+        .bind(project_id)
+        .bind(user_id)
+        .bind(role)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn remove_member(&self, project_id: i64, user_id: i64) -> DbResult<()> {
+        sqlx::query("DELETE FROM project_members WHERE project_id = ? AND user_id = ?")
+            .bind(project_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// None = no membership record (non-member).
+    pub async fn member_role(&self, project_id: i64, user_id: i64) -> DbResult<Option<String>> {
+        Ok(sqlx::query_scalar(
+            "SELECT role FROM project_members WHERE project_id = ? AND user_id = ?",
+        )
+        .bind(project_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
+    // ---- audit log (Plan §48) ----
+
+    pub async fn audit(
+        &self,
+        user_id: Option<i64>,
+        username: &str,
+        action: &str,
+        target: &str,
+        detail: &str,
+    ) -> DbResult<()> {
+        sqlx::query(
+            "INSERT INTO audit_log (user_id, username, action, target, detail, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .bind(user_id)
+        .bind(username)
+        .bind(action)
+        .bind(target)
+        .bind(detail)
+        .bind(now_secs())
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn audit_tail(&self, limit: i64) -> DbResult<Vec<AuditEntry>> {
+        Ok(sqlx::query_as(
+            "SELECT id, user_id, username, action, target, detail, created_at
+             FROM audit_log ORDER BY id DESC LIMIT ?",
+        )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
     // ---- settings ----
 
     pub async fn get_setting(&self, key: &str) -> DbResult<Option<String>> {
@@ -725,6 +878,47 @@ mod tests {
         assert_eq!(db.list_tasks(p1.id).await.unwrap().len(), 1);
         db.delete_task(t2.id).await.unwrap();
         assert!(db.get_task(t2.id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn membership_upsert_remove() {
+        let db = mem_db().await;
+        let p = db.create_project("p", "/tmp/p").await.unwrap();
+        let u = db.create_user_noauth("dev", "Dev").await.unwrap();
+        assert_eq!(db.member_role(p.id, u).await.unwrap(), None);
+        db.set_member(p.id, u, "developer").await.unwrap();
+        assert_eq!(
+            db.member_role(p.id, u).await.unwrap(),
+            Some("developer".into())
+        );
+        db.set_member(p.id, u, "viewer").await.unwrap();
+        assert_eq!(
+            db.member_role(p.id, u).await.unwrap(),
+            Some("viewer".into())
+        );
+        db.remove_member(p.id, u).await.unwrap();
+        assert_eq!(db.member_role(p.id, u).await.unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn audit_writes_and_reads_back() {
+        let db = mem_db().await;
+        db.audit(Some(1), "admin", "terminal.create", "terminal:5", "")
+            .await
+            .unwrap();
+        db.audit(
+            Some(2),
+            "dev",
+            "files.write",
+            "project:1/src/x.rs",
+            "12 bytes",
+        )
+        .await
+        .unwrap();
+        let tail = db.audit_tail(10).await.unwrap();
+        assert_eq!(tail.len(), 2);
+        assert_eq!(tail[0].action, "files.write", "newest first");
+        assert_eq!(tail[1].target, "terminal:5");
     }
 
     #[tokio::test]

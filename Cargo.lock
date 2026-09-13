@@ -1277,6 +1277,7 @@ name = "orbynode-database"
 version = "0.0.1"
 dependencies = [
  "serde",
+ "serde_json",
  "sqlx",
  "tokio",
  "tracing",
