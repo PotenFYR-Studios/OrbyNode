@@ -70,7 +70,7 @@ try {
   }
 
   const base = (process.env.VITE_BASE ?? "/").replace(/\/+$/, "");
-  const image = `${SITE_URL}/og.svg`;
+  const image = `${SITE_URL}/og.png`;
   let rendered = 0;
 
   for (const route of SITE_ROUTES) {
