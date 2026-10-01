@@ -89,6 +89,7 @@ jobs:
               stage/orbynode-daemon.exe \
               "$(pwd)/scripts/uninstall.ps1"
           else
+            mkdir -p stage
             cp "target/${{ matrix.target }}/release/orbynode" stage/orbynode-daemon
             tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" \
               -C stage "orbynode-daemon" \
@@ -184,6 +185,7 @@ jobs:
               stage/orbynode-daemon.exe \
               scripts/uninstall.ps1
           else
+            mkdir -p stage
             cp "target/${{ matrix.target }}/release/orbynode" stage/orbynode-daemon
             tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" \
               -C stage "orbynode-daemon" \
