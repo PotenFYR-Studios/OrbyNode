@@ -80,12 +80,18 @@ jobs:
           # Archive bundles the daemon plus the matching uninstaller so each
           # artifact is self-contained for the installer-build path.
           if [ "${{ matrix.archive }}" = zip ]; then
+            mkdir -p stage
+            # cargo bin is "orbynode"; archives must contain "orbynode-daemon"
+            # (installer contract: install.sh / install.ps1 check that exact name).
+            cp "target/${{ matrix.target }}/release/orbynode.exe" stage/orbynode-daemon.exe 2>/dev/null \
+              || cp "target/${{ matrix.target }}/release/orbynode" stage/orbynode-daemon
             7z a "dist/orbynode-${{ matrix.target }}.zip" \
-              "target/${{ matrix.target }}/release/orbynode-daemon.exe" \
+              stage/orbynode-daemon.exe \
               "$(pwd)/scripts/uninstall.ps1"
           else
+            cp "target/${{ matrix.target }}/release/orbynode" stage/orbynode-daemon
             tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" \
-              -C "target/${{ matrix.target }}/release" "orbynode-daemon" \
+              -C stage "orbynode-daemon" \
               -C "$(pwd)/scripts" "uninstall.sh"
           fi
       - name: Checksums
@@ -169,14 +175,18 @@ jobs:
       - name: Archive daemon
         shell: bash
         run: |
-          mkdir -p dist
+          mkdir -p dist stage
+          # Same installer contract: archive entry stays "orbynode-daemon(.exe)".
           if [ "${{ matrix.archive }}" = zip ]; then
+            cp "target/${{ matrix.target }}/release/orbynode.exe" stage/orbynode-daemon.exe 2>/dev/null \
+              || cp "target/${{ matrix.target }}/release/orbynode" stage/orbynode-daemon
             7z a "dist/orbynode-${{ matrix.target }}.zip" \
-              "target/${{ matrix.target }}/release/orbynode-daemon.exe" \
+              stage/orbynode-daemon.exe \
               scripts/uninstall.ps1
           else
+            cp "target/${{ matrix.target }}/release/orbynode" stage/orbynode-daemon
             tar -czf "dist/orbynode-${{ matrix.target }}.tar.gz" \
-              -C "target/${{ matrix.target }}/release" "orbynode-daemon" \
+              -C stage "orbynode-daemon" \
               -C "$(pwd)/scripts" "uninstall.sh"
           fi
       - name: Checksums
