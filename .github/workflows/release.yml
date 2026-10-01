@@ -99,8 +99,9 @@ jobs:
         shell: bash
         run: |
           cd dist
-          if [ "${{ matrix.archive }}" = zip ]; then sha256sum "orbynode-${{ matrix.target }}.zip" > "orbynode-${{ matrix.target }}.zip.sha256"; else shasum -a 256 "orbynode-${{ matrix.target }}.tar.gz" > "orbynode-${{ matrix.target }}.tar.gz.sha256"; fi
-          sha256sum "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
+          sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+          if [ "${{ matrix.archive }}" = zip ]; then sha "orbynode-${{ matrix.target }}.zip" > "orbynode-${{ matrix.target }}.zip.sha256"; else sha "orbynode-${{ matrix.target }}.tar.gz" > "orbynode-${{ matrix.target }}.tar.gz.sha256"; fi
+          sha "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
       - name: Verify locked build inputs
         shell: bash
         run: |
@@ -195,8 +196,9 @@ jobs:
         shell: bash
         run: |
           cd dist
-          if [ "${{ matrix.archive }}" = zip ]; then sha256sum "orbynode-${{ matrix.target }}.zip" > "orbynode-${{ matrix.target }}.zip.sha256"; else shasum -a 256 "orbynode-${{ matrix.target }}.tar.gz" > "orbynode-${{ matrix.target }}.tar.gz.sha256"; fi
-          sha256sum "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
+          sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+          if [ "${{ matrix.archive }}" = zip ]; then sha "orbynode-${{ matrix.target }}.zip" > "orbynode-${{ matrix.target }}.zip.sha256"; else sha "orbynode-${{ matrix.target }}.tar.gz" > "orbynode-${{ matrix.target }}.tar.gz.sha256"; fi
+          sha "orbynode-${{ matrix.target }}-sbom.txt" > "orbynode-${{ matrix.target }}-sbom.txt.sha256"
       - uses: sigstore/cosign-installer@v3
       - name: Cosign sign
         shell: bash
