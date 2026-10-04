@@ -224,28 +224,28 @@ export const GUIDE_DOCS: readonly DocMeta[] = [
 ];
 
 export const ADR_DOCS: readonly DocMeta[] = [
-  adr("001-daemon-architecture", "ADR 001 — Daemon Architecture", "Why the daemon owns process lifetime and durable runtime state."),
-  adr("002-pty-abstraction", "ADR 002 — PTY Abstraction", "How OrbyNode provides real cross-platform pseudo-terminals."),
-  adr("003-api-transport", "ADR 003 — API Transport", "Why browser and automation clients use authenticated HTTP and WebSocket transport."),
-  adr("004-database-storage", "ADR 004 — Database / Storage", "Why SQLite is the durable source of truth."),
-  adr("005-auth-session-model", "ADR 005 — Authentication / Session Model", "How sessions, credentials, and authorization boundaries work."),
-  adr("006-embedded-frontend", "ADR 006 — Embedded Frontend Delivery", "Why the daemon embeds static frontend assets."),
-  adr("007-desktop-daemon-separation", "ADR 007 — Desktop / Daemon Separation", "Why the desktop shell remains a replaceable daemon client."),
-  adr("008-attention-center", "ADR 008 — Attention Center", "How agent states roll up into actionable attention."),
-  adr("009-realtime-protocol", "ADR 009 — Realtime Protocol", "How snapshots, sequence numbers, replay, and overflow recovery fit together."),
-  adr("010-remote-node-identity", "ADR 010 — Remote Node Identity and Pairing", "How remote machines establish durable, revocable identity."),
-  adr("011-api-interface-stability", "ADR 011 — API Interface Stability", "The canonical policy for stable external interfaces."),
-  adr("011-platform-interfaces", "ADR 011 — Platform Interfaces", "Historical platform-interface decision superseded by the canonical ADR 011."),
-  adr("012-performance-baseline", "ADR 012 — Performance Baseline", "The minimum performance evidence required for release."),
-  adr("013-security-hardening", "ADR 013 — Security Hardening Baseline", "Baseline controls for deployment and release security."),
-  adr("014-release-engineering", "ADR 014 — Release Engineering", "How OrbyNode builds, signs, and publishes releases."),
-  adr("015-ui-design-motion", "ADR 015 — UI Design and Motion", "The interface stack, visual system, and reduced-motion rules."),
-  adr("016-multi-user-collaboration", "ADR 016 — Multi-User Collaboration", "How users share projects under server-enforced authorization."),
-  adr("017-resource-efficiency", "ADR 017 — Resource Efficiency", "Why queues, journals, and sessions stay bounded."),
-  adr("018-plugin-isolation", "ADR 018 — Plugin Isolation", "Why plugins consume APIs instead of loading native code into the daemon."),
-  adr("019-secrets-handling", "ADR 019 — Secrets Handling", "How OrbyNode stores, reveals, and redacts secrets."),
-  adr("020-update-signing-model", "ADR 020 — Update and Signing Model", "How keyless signatures and installer verification protect updates."),
-  adr("021-herdr-parity-web-workspaces", "ADR 021 — Web Workspaces and Recovery", "How workspaces, panes, scrollback, and agent sessions recover after crashes."),
+  adr("001-daemon-architecture", "ADR 001: Daemon Architecture", "Why the daemon owns process lifetime and durable runtime state."),
+  adr("002-pty-abstraction", "ADR 002: PTY Abstraction", "How OrbyNode provides real cross-platform pseudo-terminals."),
+  adr("003-api-transport", "ADR 003: API Transport", "Why browser and automation clients use authenticated HTTP and WebSocket transport."),
+  adr("004-database-storage", "ADR 004: Database / Storage", "Why SQLite is the durable source of truth."),
+  adr("005-auth-session-model", "ADR 005: Authentication / Session Model", "How sessions, credentials, and authorization boundaries work."),
+  adr("006-embedded-frontend", "ADR 006: Embedded Frontend Delivery", "Why the daemon embeds static frontend assets."),
+  adr("007-desktop-daemon-separation", "ADR 007: Desktop / Daemon Separation", "Why the desktop shell remains a replaceable daemon client."),
+  adr("008-attention-center", "ADR 008: Attention Center", "How agent states roll up into actionable attention."),
+  adr("009-realtime-protocol", "ADR 009: Realtime Protocol", "How snapshots, sequence numbers, replay, and overflow recovery fit together."),
+  adr("010-remote-node-identity", "ADR 010: Remote Node Identity and Pairing", "How remote machines establish durable, revocable identity."),
+  adr("011-api-interface-stability", "ADR 011: API Interface Stability", "The canonical policy for stable external interfaces."),
+  adr("011-platform-interfaces", "ADR 011: Platform Interfaces", "Historical platform-interface decision superseded by the canonical ADR 011."),
+  adr("012-performance-baseline", "ADR 012: Performance Baseline", "The minimum performance evidence required for release."),
+  adr("013-security-hardening", "ADR 013: Security Hardening Baseline", "Baseline controls for deployment and release security."),
+  adr("014-release-engineering", "ADR 014: Release Engineering", "How OrbyNode builds, signs, and publishes releases."),
+  adr("015-ui-design-motion", "ADR 015: UI Design and Motion", "The interface stack, visual system, and reduced-motion rules."),
+  adr("016-multi-user-collaboration", "ADR 016: Multi-User Collaboration", "How users share projects under server-enforced authorization."),
+  adr("017-resource-efficiency", "ADR 017: Resource Efficiency", "Why queues, journals, and sessions stay bounded."),
+  adr("018-plugin-isolation", "ADR 018: Plugin Isolation", "Why plugins consume APIs instead of loading native code into the daemon."),
+  adr("019-secrets-handling", "ADR 019: Secrets Handling", "How OrbyNode stores, reveals, and redacts secrets."),
+  adr("020-update-signing-model", "ADR 020: Update and Signing Model", "How keyless signatures and installer verification protect updates."),
+  adr("021-herdr-parity-web-workspaces", "ADR 021: Web Workspaces and Recovery", "How workspaces, panes, scrollback, and agent sessions recover after crashes."),
 ];
 
 export const DOCS: readonly DocMeta[] = [...GUIDE_DOCS, ...ADR_DOCS];
@@ -298,7 +298,7 @@ export function routeMeta(pathname: string): PageMeta {
   const path = cleanPath(pathname);
   if (path === "/") {
     return {
-      title: "OrbyNode — Persistent Control Plane for Coding Agents",
+      title: "OrbyNode: Persistent Control Plane for Coding Agents",
       description:
         "Run persistent coding agents, terminals, files, Git tasks, and remote machines from one self-hosted control plane.",
     };

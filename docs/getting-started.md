@@ -24,9 +24,9 @@ Open <http://127.0.0.1:7676/setup> to create the first Owner account.
 
 Choose one:
 
-1. **Installer script** (recommended) — [Installation guide](installation.md)
-2. **Download binary** — [GitHub Releases](https://github.com/PotenFYR-Studios/OrbyNode/releases/latest)
-3. **Build from source** — [Development guide](development.md)
+1. **Installer script** (recommended). [Installation guide](installation.md)
+2. **Download binary**. [GitHub Releases](https://github.com/PotenFYR-Studios/OrbyNode/releases/latest)
+3. **Build from source**. [Development guide](development.md)
 
 ## First-run setup
 
@@ -91,10 +91,10 @@ RBAC is enforced on every route and WebSocket subscription. Audit logs track all
 
 ## Next steps
 
-- [Architecture](../ARCHITECTURE.md) — daemon-centric design and realtime model
-- [Security](security-model.md) — authentication, RBAC, audit, threat model
-- [REST API](rest-api.md) — public `/api/v1` surface for external integrations
-- [Documentation site](https://orbynode.docs.potenfyr.in) — searchable, prerendered guide
-- [Development](development.md) — build from source, run tests, frontend workflow
-- [Operations](operations.md) — deployment, monitoring, backup, upgrade
-- [Roadmap](../ROADMAP.md) — milestone status and v1.0 readiness
+- [Architecture](../ARCHITECTURE.md), daemon-centric design and realtime model
+- [Security](security-model.md), authentication, RBAC, audit, threat model
+- [REST API](rest-api.md), public `/api/v1` surface for external integrations
+- [Documentation site](https://orbynode.docs.potenfyr.in), searchable, prerendered guide
+- [Development](development.md), build from source, run tests, frontend workflow
+- [Operations](operations.md), deployment, monitoring, backup, upgrade
+- [Roadmap](../ROADMAP.md), milestone status and v1.0 readiness

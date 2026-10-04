@@ -12,13 +12,13 @@ import {
 const SHELL = `<!doctype html>
 <html lang="en">
   <head>
-    <title>OrbyNode — Persistent Control Plane for Coding Agents</title>
+    <title>OrbyNode: Persistent Control Plane for Coding Agents</title>
     <meta name="description" content="Run persistent coding agents." />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <link rel="canonical" href="https://orbynode.docs.potenfyr.in/" />
-    <meta property="og:title" content="OrbyNode — Persistent Control Plane for Coding Agents" />
+    <meta property="og:title" content="OrbyNode: Persistent Control Plane for Coding Agents" />
     <meta property="og:url" content="https://orbynode.docs.potenfyr.in/" />
-    <meta name="twitter:title" content="OrbyNode — Persistent Control Plane for Coding Agents" />
+    <meta name="twitter:title" content="OrbyNode: Persistent Control Plane for Coding Agents" />
   </head>
   <body><div id="root"></div></body>
 </html>`;

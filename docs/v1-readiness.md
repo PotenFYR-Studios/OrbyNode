@@ -47,7 +47,7 @@ test upgrade, rollback and clean uninstall on every first-class target.
 - Every push to `main` builds the release matrix (publish skipped);
   tags build the extended matrix and publish.
 - Same-tag re-run replaces assets in place (`overwrite_files`) and
-  regenerates the changelog body — no duplicate releases.
+  regenerates the changelog body, no duplicate releases.
 - Two install paths ship with every release: the curl bootstrap
   (`scripts/install.sh` / `install.ps1` in-repo) and standalone
   `orbynode-install.sh` / `.ps1` artifacts published to the release with

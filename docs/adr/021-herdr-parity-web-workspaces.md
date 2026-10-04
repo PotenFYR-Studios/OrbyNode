@@ -6,20 +6,20 @@
 
 ## Decision
 
-OrbyNode adopts Herdr's workspace model — workspaces, tabs, panes — as a
+OrbyNode adopts Herdr's workspace model, workspaces, tabs, panes, as a
 web-GUI-only surface. No terminal-multiplexer client is added; the browser is
 the only pane interface, per the daemon-centric architecture (ADR 001).
 
 Crash recovery is three-tier. After a hard OS crash, daemon restart restores:
 
-1. **Shape** — workspaces, tabs, pane layout, cwd, env, focus, titles from
+1. **Shape**, workspaces, tabs, pane layout, cwd, env, focus, titles from
    SQLite (durable state; Plan rule 10).
-2. **Scrollback** — pane output journaled durably through a batched,
+2. **Scrollback**, pane output journaled durably through a batched,
    bounded writer into SQLite; replayed into pane scrollback before any
    client attaches. Journal output is captured once and fanned out together
    with live subscribers (Plan rule 2); per-pane and global byte caps keep
    the writer bounded under pressure (Plan rule 8).
-3. **Agent sessions** — panes that ran agents with native integration
+3. **Agent sessions**, panes that ran agents with native integration
    session IDs (docs/agents.md Level 3) are resumed by typing the agent's
    documented `--resume`/`resume` command into the restored shell. Opt-in
    via configuration (`restore.resume_agents`, default off): typing into a

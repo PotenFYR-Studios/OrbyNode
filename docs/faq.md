@@ -75,9 +75,9 @@ If you need PostgreSQL, the architecture supports swapping the storage layer (AD
 
 Three-tier recovery after hard OS crash:
 
-1. **Shape** — workspaces, tabs, panes, layout, cwd, env, titles restored from SQLite
-2. **Scrollback** — pane output journaled durably; replayed before client attaches
-3. **Agent sessions** — panes that ran agents with native integration can be resumed (opt-in via `restore.resume_agents`)
+1. **Shape**, workspaces, tabs, panes, layout, cwd, env, titles restored from SQLite
+2. **Scrollback**, pane output journaled durably; replayed before client attaches
+3. **Agent sessions**, panes that ran agents with native integration can be resumed (opt-in via `restore.resume_agents`)
 
 The daemon restarts and replays state before serving requests. Processes that died during crash cannot be restored; the product never claims otherwise. Tier-2 replay and tier-3 agent resume are the documented guarantees.
 

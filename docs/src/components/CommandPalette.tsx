@@ -44,7 +44,7 @@ export function buildPaletteEntries(): PaletteEntry[] {
     for (const heading of headings) {
       entries.push({
         title: heading.text,
-        description: `${doc.title} — ${heading.text}`,
+        description: `${doc.title}: ${heading.text}`,
         route: `${doc.route}#${slugify(heading.text)}`,
         group: doc.title,
         kind: "heading",

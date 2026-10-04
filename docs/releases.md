@@ -59,7 +59,7 @@ See [installation.md](installation.md) for the full installer reference.
 
 ### Upgrade
 
-1. Run the installer again — it replaces binaries in place
+1. Run the installer again, it replaces binaries in place
 2. Restart the daemon
 3. OrbyNode runs schema migrations on startup
 
@@ -108,7 +108,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Same-tag re-runs replace assets in place and regenerate the changelog body — no duplicate releases accumulate.
+Same-tag re-runs replace assets in place and regenerate the changelog body, no duplicate releases accumulate.
 
 ### Local release build
 

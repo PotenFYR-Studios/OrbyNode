@@ -64,8 +64,8 @@ tasks, services and machine state in one daemon.
 ADRs live in [adr/](adr/) and capture substantial architecture decisions.
 Notable:
 
-- [ADR 001](adr/001-daemon-architecture.md) — daemon-centric architecture
-- [ADR 021](adr/021-herdr-parity-web-workspaces.md) — Herdr-parity web workspaces and crash recovery
+- [ADR 001](adr/001-daemon-architecture.md), daemon-centric architecture
+- [ADR 021](adr/021-herdr-parity-web-workspaces.md). Herdr-parity web workspaces and crash recovery
 
 ## Community
 

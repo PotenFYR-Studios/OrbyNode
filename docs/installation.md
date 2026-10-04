@@ -11,7 +11,7 @@ OrbyNode runs on Linux, macOS, and Windows (x86_64 and aarch64). Three supported
 - curl or wget (installer only)
 - Optional: systemd for Linux service units
 
-## Method 1 — installer script (recommended)
+## Method 1, installer script (recommended)
 
 ### Linux/macOS one-liner
 
@@ -107,7 +107,7 @@ To purge data:
 & "$env:LOCALAPPDATA\Programs\orbynode\bin\uninstall.ps1" -Purge
 ```
 
-## Method 2 — download and extract
+## Method 2, download and extract
 
 1. Download the archive for your platform from [Releases](https://github.com/PotenFYR-Studios/OrbyNode/releases/latest)
 2. Verify the checksum:
@@ -121,7 +121,7 @@ To purge data:
 4. Move `orbynode-daemon` to a directory on your PATH
 5. Run `orbynode-daemon`
 
-## Method 3 — build from source
+## Method 3, build from source
 
 See [Development](development.md) for build requirements and instructions.
 
