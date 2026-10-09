@@ -3,11 +3,11 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:6366f1,50:22d3ee,100:a3e635&height=220&section=header&text=OrbyNode&fontSize=52&fontColor=ffffff&fontAlignY=34&desc=The%20Control%20Plane%20for%20Coding%20Agents&descSize=18&descAlignY=55&animation=twinkling" width="100%" alt="OrbyNode Banner"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1200&color=22D3EE&center=true&vCenter=true&width=850&lines=Persistent+agents+across+browser+disconnects;Real+PTYs%2C+files%2C+Git%2C+tasks+and+previews;Multi-user+RBAC+and+multi-machine+control;One+Attention+Center+for+what+needs+you+now)](https:/docs.potenfyr.in/OrbyNode)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1200&color=22D3EE&center=true&vCenter=true&width=850&lines=Persistent+agents+across+browser+disconnects;Real+PTYs%2C+files%2C+Git%2C+tasks+and+previews;Multi-user+RBAC+and+multi-machine+control;One+Attention+Center+for+what+needs+you+now)](https://docs.potenfyr.in/repo/orbynode)
 
 <p align="center">
   <a href="https://potenfyr.in"><img src="https://img.shields.io/badge/Website-potenfyr.in-22d3ee?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1c1e26" alt="Website" /></a>
-  <a href="https:/docs.potenfyr.in/OrbyNode"><img src="https://img.shields.io/badge/https:/docs.potenfyr.in/OrbyNode-6366f1?style=for-the-badge&logo=gitbook&logoColor=white&labelColor=1c1e26" alt="Documentation" /></a>
+  <a href="https://docs.potenfyr.in/repo/orbynode"><img src="https://img.shields.io/badge/https://docs.potenfyr.in/repo/orbynode?style=for-the-badge&logo=gitbook&logoColor=white&labelColor=1c1e26" alt="Documentation" /></a>
   <a href="https://discord.com/invite/zUaN2FPBec"><img src="https://img.shields.io/badge/Discord-Join%20us-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=1c1e26" alt="Discord" /></a>
   <a href="mailto:support@potenfyr.in"><img src="https://img.shields.io/badge/Email-support%40potenfyr.in-a3e635?style=for-the-badge&logo=gmail&logoColor=white&labelColor=1c1e26" alt="Email" /></a>
   <a href="https://github.com/PotenFYR-Studios/OrbyNode"><img src="https://komarev.com/ghpvc/?username=PotenFYR-Studios-OrbyNode&color=22d3ee&style=for-the-badge&label=VIEW&labelColor=1c1e26" alt="View" /></a>
@@ -18,7 +18,7 @@
 [![Release Build](https://img.shields.io/github/actions/workflow/status/PotenFYR-Studios/OrbyNode/release.yml?style=flat-square&label=release&labelColor=1c1e26&color=2ea043)](https://github.com/PotenFYR-Studios/OrbyNode/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20%2B%20Commons%20Clause-6366f1?style=flat-square&labelColor=1c1e26)](LICENSE)
 
-[Docs](https:/docs.potenfyr.in/OrbyNode) · [Getting started](https://docs.potenfyr.in/orbynode/getting-started.md) · [Architecture](ARCHITECTURE.md) · [API](https://docs.potenfyr.in/orbynode/rest-api.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Docs](https://docs.potenfyr.in/repo/orbynode) · [Getting started](https://docs.potenfyr.in/repo/orbynode/getting-started) · [Architecture](ARCHITECTURE.md) · [API](https://docs.potenfyr.in/repo/orbynode/rest-api) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 </div>
 
@@ -125,36 +125,36 @@ Local release subset:
 scripts/release.sh <rust-target-triple>
 ```
 
-See [docs/v1-readiness.md](https://docs.potenfyr.in/orbynode/v1-readiness.md) for remaining clean-machine installer and upgrade gates.
+See [docs/v1-readiness.md](https://docs.potenfyr.in/repo/orbynode/v1-readiness) for remaining clean-machine installer and upgrade gates.
 
 ## 📚 Documentation
 
-- [Documentation index](https://docs.potenfyr.in/orbynode/README.md)
-- [Getting started](https://docs.potenfyr.in/orbynode/getting-started.md)
+- [Documentation index](https://docs.potenfyr.in/repo/orbynode/README)
+- [Getting started](https://docs.potenfyr.in/repo/orbynode/getting-started)
 - [Architecture](ARCHITECTURE.md)
-- [Operations](https://docs.potenfyr.in/orbynode/operations.md)
-- [Documentation site](https:/docs.potenfyr.in/OrbyNode)
-- [REST API](https://docs.potenfyr.in/orbynode/rest-api.md)
-- [Realtime protocol](https://docs.potenfyr.in/orbynode/realtime.md)
-- [Agents](https://docs.potenfyr.in/orbynode/agents.md)
-- [Workflows](https://docs.potenfyr.in/orbynode/workflows.md)
-- [Remote nodes](https://docs.potenfyr.in/orbynode/remote-nodes.md)
-- [Notifications](https://docs.potenfyr.in/orbynode/notifications.md)
-- [Security model](https://docs.potenfyr.in/orbynode/security-model.md)
-- [Frontend](https://docs.potenfyr.in/orbynode/frontend.md)
-- [Development](https://docs.potenfyr.in/orbynode/development.md)
-- [Testing](https://docs.potenfyr.in/orbynode/testing.md)
-- [Contributing](https://docs.potenfyr.in/orbynode/contributing.md)
-- [Troubleshooting](https://docs.potenfyr.in/orbynode/troubleshooting.md)
-- [Performance](https://docs.potenfyr.in/orbynode/performance.md)
-- [Release readiness](https://docs.potenfyr.in/orbynode/v1-readiness.md)
-- [Changelog](https://docs.potenfyr.in/orbynode/changelog.md)
-- [ADRs](https://docs.potenfyr.in/orbynode/adr/)
+- [Operations](https://docs.potenfyr.in/repo/orbynode/operations)
+- [Documentation site](https://docs.potenfyr.in/repo/orbynode)
+- [REST API](https://docs.potenfyr.in/repo/orbynode/rest-api)
+- [Realtime protocol](https://docs.potenfyr.in/repo/orbynode/realtime)
+- [Agents](https://docs.potenfyr.in/repo/orbynode/agents)
+- [Workflows](https://docs.potenfyr.in/repo/orbynode/workflows)
+- [Remote nodes](https://docs.potenfyr.in/repo/orbynode/remote-nodes)
+- [Notifications](https://docs.potenfyr.in/repo/orbynode/notifications)
+- [Security model](https://docs.potenfyr.in/repo/orbynode/security-model)
+- [Frontend](https://docs.potenfyr.in/repo/orbynode/frontend)
+- [Development](https://docs.potenfyr.in/repo/orbynode/development)
+- [Testing](https://docs.potenfyr.in/repo/orbynode/testing)
+- [Contributing](https://docs.potenfyr.in/repo/orbynode/contributing)
+- [Troubleshooting](https://docs.potenfyr.in/repo/orbynode/troubleshooting)
+- [Performance](https://docs.potenfyr.in/repo/orbynode/performance)
+- [Release readiness](https://docs.potenfyr.in/repo/orbynode/v1-readiness)
+- [Changelog](https://docs.potenfyr.in/repo/orbynode/changelog)
+- [ADRs](https://docs.potenfyr.in/repo/orbynode/adr)
 
 ## 💬 Support
 
 - Bugs, ideas and questions: [GitHub Issues](https://github.com/PotenFYR-Studios/OrbyNode/issues)
-- Documentation: <https:/docs.potenfyr.in/OrbyNode>
+- Documentation: <https://docs.potenfyr.in/repo/orbynode>
 - Community: [Discord](https://discord.com/invite/zUaN2FPBec)
 
 ## 🤝 Contributing
