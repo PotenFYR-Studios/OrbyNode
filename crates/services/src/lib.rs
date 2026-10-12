@@ -295,8 +295,15 @@ impl ServiceRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "linux")]
     use std::time::Duration;
 
+    // Linux-only: `discover_ports` is procfs-based here. On other platforms it
+    // returns an empty stub, so asserting the port is found would panic *while*
+    // the `spawn_blocking(accept)` below is still parked — the runtime then
+    // blocks forever on shutdown. The portable stub behaviour is covered by
+    // `discovery_stub_is_empty_off_linux`.
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn discovery_finds_listening_port() {
         // Bind a listener, then discover it.
@@ -322,6 +329,15 @@ mod tests {
             .unwrap();
         drop(sock);
         let _ = task.await;
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    #[tokio::test]
+    async fn discovery_stub_is_empty_off_linux() {
+        // Non-Linux platforms use the empty stub until the per-OS sampler
+        // lands (M13+). This keeps `discover_ports` covered everywhere without
+        // the Linux-dependent assertion above.
+        assert!(discover_ports().await.unwrap().is_empty());
     }
 
     #[cfg(target_os = "linux")]
