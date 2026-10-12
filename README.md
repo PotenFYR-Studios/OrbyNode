@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://potenfyr.in"><img src="https://img.shields.io/badge/Website-potenfyr.in-22d3ee?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=1c1e26" alt="Website" /></a>
-  <a href="https://docs.potenfyr.in/repo/orbynode"><img src="https://img.shields.io/badge/https://docs.potenfyr.in/repo/orbynode?style=for-the-badge&logo=gitbook&logoColor=white&labelColor=1c1e26" alt="Documentation" /></a>
+  <a href="https://docs.potenfyr.in/repo/orbynode"><img src="https://img.shields.io/badge/Docs-docs.potenfyr.in-6366f1?style=for-the-badge&logo=gitbook&logoColor=white&labelColor=1c1e26" alt="Documentation" /></a>
   <a href="https://discord.com/invite/zUaN2FPBec"><img src="https://img.shields.io/badge/Discord-Join%20us-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=1c1e26" alt="Discord" /></a>
   <a href="mailto:support@potenfyr.in"><img src="https://img.shields.io/badge/Email-support%40potenfyr.in-a3e635?style=for-the-badge&logo=gmail&logoColor=white&labelColor=1c1e26" alt="Email" /></a>
   <a href="https://github.com/PotenFYR-Studios/OrbyNode"><img src="https://komarev.com/ghpvc/?username=PotenFYR-Studios-OrbyNode&color=22d3ee&style=for-the-badge&label=VIEW&labelColor=1c1e26" alt="View" /></a>
@@ -125,7 +125,7 @@ Local release subset:
 scripts/release.sh <rust-target-triple>
 ```
 
-See [docs/v1-readiness.md](https://docs.potenfyr.in/repo/orbynode/v1-readiness) for remaining clean-machine installer and upgrade gates.
+See the [release readiness notes](https://docs.potenfyr.in/repo/orbynode/v1-readiness) for remaining clean-machine installer and upgrade gates.
 
 ## 📚 Documentation
 
