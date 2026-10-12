@@ -2,7 +2,7 @@
 
 Thanks for helping build OrbyNode. Keep changes milestone-scoped (see
 [ROADMAP.md](ROADMAP.md)); substantial architectural decisions go through an
-[ADR](docs/adr/) first.
+[ADR](https://docs.potenfyr.in/repo/orbynode/adr) first.
 
 ## Code of conduct
 
@@ -36,7 +36,6 @@ cargo build
 | `crates/auth` | Argon2id, sessions, throttling and permissions. |
 | `crates/api` | Axum routes, middleware, gateway and embedded UI. |
 | `web` | Vite + React + TypeScript + Bun + Magic UI client. |
-| `docs/adr` | Architecture decision records. |
 
 ## Workflow
 
@@ -68,9 +67,6 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 (cd web && bun run check)
 (cd web && bun run build)
-(cd docs && bun test)
-(cd docs && bun run typecheck)
-(cd docs && bun run build)
 ```
 
 You can run the same gates with:

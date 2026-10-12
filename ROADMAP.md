@@ -43,7 +43,7 @@ release verification rather than new feature surface:
 4. Validate the Tauri desktop package separately.
 5. Complete end-to-end production performance captures.
 
-See [docs/v1-readiness.md](docs/v1-readiness.md).
+See the [release-readiness page](https://docs.potenfyr.in/repo/orbynode/v1-readiness).
 
 ## Definition of done
 

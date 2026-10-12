@@ -106,7 +106,8 @@ fan-out. CI runs Rust checks on Linux, macOS and Windows plus Bun web checks.
 
 ## Key decisions
 
-Architecture decisions are recorded in [docs/adr](docs/adr/). The most
+Architecture decisions are recorded in the
+[docs hub](https://docs.potenfyr.in/repo/orbynode/adr). The most
 load-bearing decisions cover daemon ownership, PTY abstraction, realtime
 protocol, persistence, authentication, embedded frontend, remote-node identity
 and platform interfaces.

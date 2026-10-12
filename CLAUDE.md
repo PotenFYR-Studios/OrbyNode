@@ -2,15 +2,17 @@
 
 Self-hosted, daemon-centric control plane for coding agents. Rust workspace
 (`crates/`) + TypeScript/React web UI (`web/`). Authoritative long-form plan:
-`Plan.md` (untracked, by design). Read `ARCHITECTURE.md` and `docs/adr/`
-before non-trivial changes.
+`Plan.md` (untracked, by design). Read `ARCHITECTURE.md` and the
+[ADR index](https://docs.potenfyr.in/repo/orbynode/adr) before non-trivial
+changes.
 
 ## Scope discipline
 
 - Work milestone by milestone (`ROADMAP.md` = status, `Plan.md` §123+ = detail).
 - Do not start a later milestone's features early; do not make the whole
   project in one pass.
-- Substantial architectural changes get an ADR in `docs/adr/` first.
+- Substantial architectural changes get an ADR in the
+  [docs hub](https://docs.potenfyr.in/repo/orbynode/adr) first.
 
 ## Non-negotiables (Plan §151 - full list there)
 
@@ -37,7 +39,6 @@ before non-trivial changes.
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 npm run check --prefix web && npm run build --prefix web
-(cd docs && bun test && bun run typecheck && bun run build)
 ```
 
-All four must pass. Do not mark work complete merely because it compiles.
+All three must pass. Do not mark work complete merely because it compiles.
