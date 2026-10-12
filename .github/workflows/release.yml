@@ -125,7 +125,10 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  # Full matrix runs only for tags; branch pushes ship the trimmed matrix.
+  # Extra targets that ship only on tags. The core matrix (all first-class
+  # platforms) is built by `build` on every push; this job must not re-upload
+  # any of those artifact names because upload-artifact@v4 rejects duplicate
+  # names within a single run.
   build-extended:
     name: ${{ matrix.target }} (extended)
     if: startsWith(github.ref, 'refs/tags/v')
@@ -134,15 +137,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-musl
-            archive: tar.gz
-          - os: ubuntu-22.04
-            target: aarch64-unknown-linux-gnu
-            archive: tar.gz
-          - os: macos-14
-            target: x86_64-apple-darwin
-            archive: tar.gz
           - os: windows-2022
             target: aarch64-pc-windows-msvc
             archive: zip
@@ -159,15 +153,6 @@ jobs:
           bun-version: latest
       - run: (cd web && bun install --frozen-lockfile)
       - run: (cd web && bun run build)
-      - name: Install cross linker (aarch64-linux)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
-      - name: Configure cross linker environment (aarch64-linux)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
-      - name: Install musl tools
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: cargo build --release --locked -p orbynode-daemon --target ${{ matrix.target }}
       - name: Create SBOM
         shell: bash
@@ -218,7 +203,7 @@ jobs:
   # resolve to these assets. Published on tags; refreshed on same-version re-run.
   installers:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, build-extended]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -238,7 +223,10 @@ jobs:
   release:
     needs: [build, build-extended, installers]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publish as long as the core matrix and installers succeed. `always()`
+    # keeps an optional extended target (e.g. Windows ARM64) from blocking the
+    # release; `needs` still waits for it so its assets are included if built.
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result == 'success' && needs.installers.result == 'success' }}
     permissions:
       contents: write
     steps:
